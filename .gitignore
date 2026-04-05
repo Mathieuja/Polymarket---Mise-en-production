@@ -1,0 +1,30 @@
+
+# Environments / secrets
+.env
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Streamlit
+.streamlit/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Logs
+*.log
