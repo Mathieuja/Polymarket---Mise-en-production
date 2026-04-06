@@ -1,0 +1,259 @@
+openapi: 3.0.3
+info:
+  title: Polymarket Paper Trading API
+  version: 0.1.0
+  description: |
+    API contract (backend not implemented yet). The Streamlit app will consume these endpoints
+    when BACKEND_MODE=api.
+
+servers:
+  - url: http://localhost:8000
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+      required: [detail]
+
+    Health:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+      required: [status]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+      required: [email, password]
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: bearer
+        email:
+          type: string
+          format: email
+      required: [access_token, token_type]
+
+    Market:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        yes_price:
+          type: number
+          minimum: 0
+          maximum: 1
+      required: [id, title]
+
+    Portfolio:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        cash_usd:
+          type: number
+        initial_cash_usd:
+          type: number
+      required: [id, name, cash_usd]
+
+    CreatePortfolioRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        initial_cash_usd:
+          type: number
+          minimum: 0
+      required: [name, initial_cash_usd]
+
+    Trade:
+      type: object
+      properties:
+        id:
+          type: string
+        portfolio_id:
+          type: string
+        market_id:
+          type: string
+        outcome:
+          type: string
+          enum: [YES, NO]
+        action:
+          type: string
+          enum: [BUY, SELL]
+        qty:
+          type: number
+          exclusiveMinimum: 0
+        price:
+          type: number
+          minimum: 0
+          maximum: 1
+        ts:
+          type: string
+          format: date-time
+      required: [id, portfolio_id, market_id, outcome, action, qty, price, ts]
+
+    CreateTradeRequest:
+      type: object
+      properties:
+        market_id:
+          type: string
+        outcome:
+          type: string
+          enum: [YES, NO]
+        action:
+          type: string
+          enum: [BUY, SELL]
+        qty:
+          type: number
+          exclusiveMinimum: 0
+        price:
+          type: number
+          minimum: 0
+          maximum: 1
+      required: [market_id, outcome, action, qty, price]
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      security: []
+      summary: Healthcheck
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /auth/login:
+    post:
+      security: []
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /markets:
+    get:
+      summary: List markets
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Market"
+
+  /portfolios:
+    get:
+      summary: List portfolios
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Portfolio"
+
+    post:
+      summary: Create portfolio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePortfolioRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Portfolio"
+
+  /portfolios/{portfolio_id}/trades:
+    post:
+      summary: Create trade
+      parameters:
+        - in: path
+          name: portfolio_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTradeRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trade"
+
+  /trades:
+    get:
+      summary: List trades
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trade"
