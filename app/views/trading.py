@@ -20,11 +20,20 @@ def render(api: APIClient) -> None:
         st.info("Create a portfolio first (Portfolio page).")
         return
 
-    selected_portfolio_id = st.session_state.get("selected_portfolio_id")
-    portfolio_ids = [p.get("id") for p in portfolios]
-    if selected_portfolio_id not in portfolio_ids:
-        selected_portfolio_id = portfolio_ids[0]
-        st.session_state.selected_portfolio_id = selected_portfolio_id
+    portfolio_map = {p.get("name"): p.get("id") for p in portfolios}
+    portfolio_names = list(portfolio_map.keys())
+
+    # --- Portfolio selection ---
+    selected_portfolio_name = st.selectbox(
+        "Select Portfolio",
+        options=portfolio_names,
+        index=0,
+    )
+    selected_portfolio_id = portfolio_map.get(selected_portfolio_name)
+    st.session_state.selected_portfolio_id = selected_portfolio_id
+    # ---
+
+    st.caption(f"Trading with portfolio: `{selected_portfolio_name}` (`{selected_portfolio_id}`)")
 
     df = pd.DataFrame(markets)
     label_col = "title" if "title" in df.columns else df.columns[0]

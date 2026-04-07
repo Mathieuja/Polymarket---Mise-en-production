@@ -17,6 +17,22 @@ class APIClientError(RuntimeError):
     pass
 
 
+def _get_users_db_path() -> Path:
+    return Path(__file__).resolve().parents[1] / "configs" / "fixtures" / "users.json"
+
+
+def _read_users_db() -> dict:
+    path = _get_users_db_path()
+    if not path.exists():
+        return {"users": []}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_users_db(data: dict) -> None:
+    path = _get_users_db_path()
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
 @dataclass
 class APIClient:
     backend_mode: str
@@ -34,10 +50,54 @@ class APIClient:
         if self.backend_mode == "mock":
             if not email.strip() or not password:
                 raise APIClientError("Email/password required")
+
+            db = _read_users_db()
+            user = next((u for u in db.get("users", []) if u.get("email") == email), None)
+
+            if not user:
+                raise APIClientError("Email incorrect")
+
+            if user.get("password") != password:
+                raise APIClientError("Mot de passe incorrect")
+
             return {"access_token": "mock-token", "token_type": "bearer", "email": email}
 
         payload = {"email": email, "password": password}
         return self._post_json("/auth/login", payload)
+
+    def create_user(self, email: str, password: str) -> dict[str, Any]:
+        if self.backend_mode == "mock":
+            if not email.strip() or not password:
+                raise APIClientError("Email/password required")
+
+            db = _read_users_db()
+            if any(u.get("email") == email for u in db.get("users", [])):
+                raise APIClientError("Email already exists")
+
+            new_user = {"email": email, "password": password}
+            db.setdefault("users", []).append(new_user)
+            _write_users_db(db)
+
+            return new_user
+
+        # This part would call the real API if backend_mode was 'api'
+        raise NotImplementedError("User creation is only supported in mock mode")
+
+    def delete_user(self, email: str) -> None:
+        if self.backend_mode == "mock":
+            db = _read_users_db()
+            users = db.get("users", [])
+            users_to_keep = [u for u in users if u.get("email") != email]
+
+            if len(users) == len(users_to_keep):
+                raise APIClientError("User not found")
+
+            db["users"] = users_to_keep
+            _write_users_db(db)
+            return
+
+        # This part would call the real API if backend_mode was 'api'
+        raise NotImplementedError("User deletion is only supported in mock mode")
 
     # --- Read models ---
     def get_markets(self) -> list[dict[str, Any]]:

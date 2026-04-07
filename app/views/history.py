@@ -10,13 +10,32 @@ def render(api: APIClient) -> None:
     st.header("History")
 
     token = st.session_state.get("token")
+    portfolios = api.get_portfolios(token=token)
+    if not portfolios:
+        st.info("Create a portfolio first (Portfolio page).")
+        return
+
+    portfolio_map = {p.get("name"): p.get("id") for p in portfolios}
+    portfolio_names = list(portfolio_map.keys())
+
+    # --- Portfolio selection ---
+    selected_portfolio_name = st.selectbox(
+        "Select Portfolio",
+        options=portfolio_names,
+        index=0,
+    )
+    selected_portfolio_id = portfolio_map.get(selected_portfolio_name)
+    st.session_state.selected_portfolio_id = selected_portfolio_id
+    # ---
+
+    st.caption(f"Showing history for portfolio: `{selected_portfolio_name}` (`{selected_portfolio_id}`)")
+
     trades = api.get_trades(token=token)
 
     if not trades:
         st.info("No trades yet (mock fixtures).")
         return
 
-    selected_portfolio_id = st.session_state.get("selected_portfolio_id")
     if selected_portfolio_id:
         trades = [t for t in trades if t.get("portfolio_id") == selected_portfolio_id]
 

@@ -65,4 +65,11 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        # This will handle Ctrl+C and allow the script to exit gracefully
+        pass
+    except Exception as e:
+        # This will catch any other exceptions and display them in the Streamlit app
+        st.error(f"An unexpected error occurred: {e}")
