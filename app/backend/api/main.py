@@ -2,15 +2,13 @@
 FastAPI application main file for the backend API.
 """
 
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.backend.api.routers import health_router
 
-# routers will contain the endpoints for the API
-# from .routers import  ...
-
-from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,19 +18,27 @@ async def lifespan(app: FastAPI):
     At startup, initializes database connections, loads configuration, etc.
     At shutdown, handles all deconnections, cleanup, etc.
     """
-    # startup operations here
+    app.state.is_started = True
 
     yield
-    
-    # shutdown operations here
+
+    app.state.is_started = False
 
 
 app = FastAPI(
-    title = "polyapi",
-    description = "A FastAPI backend for Polymarket data and trading operations", 
+    title="polyapi",
+    description="A FastAPI backend for Polymarket data and trading operations",
     version = "0.1.0",
-    lifespan=lifespan)
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-# include routers when they are implemented
-# app.include_router(...)
+app.include_router(health_router)
