@@ -10,7 +10,7 @@ from uuid import uuid4
 
 import requests
 
-from app.utils.portfolio_math import can_sell
+from app.frontend.utils.portfolio_math import can_sell
 
 
 class APIClientError(RuntimeError):

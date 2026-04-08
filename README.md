@@ -27,7 +27,7 @@ python -m venv .venv
 3) Installer les dépendances
 
 ```bash
-pip install -r app/requirements.txt
+pip install -r app/frontend/requirements.txt
 ```
 
 4) Configurer les variables d'environnement
@@ -41,12 +41,14 @@ Variables utilisées par l'app:
 5) Démarrer Streamlit
 
 ```bash
-streamlit run app/main.py
+streamlit run app/frontend/main.py
 ```
 
 ## Structure
 
-- `app/`: frontend Streamlit (pages, client API, fixtures mock, tests)
+- `app/frontend/`: frontend Streamlit (pages, client API, fixtures mock)
+- `tests/unit/`: tests unitaires (dont tests composants)
+- `tests/integration/`: tests d'integration
 - `ds/`: (à venir) pipeline data science / ingestion
 
 ## Docker

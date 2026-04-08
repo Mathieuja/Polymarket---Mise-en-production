@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import pytest
 
-from app.utils.portfolio_math import (
+from app.frontend.utils.portfolio_math import (
     can_sell,
     compute_portfolio_metrics,
     compute_positions,
     market_outcome_price_usd,
     position_qty,
 )
+
+pytestmark = pytest.mark.unit
 
 
 def test_market_outcome_price_yes_no():

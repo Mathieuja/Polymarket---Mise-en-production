@@ -4,18 +4,18 @@ import sys
 from pathlib import Path
 
 # Ensure repo root is on sys.path so we can import `app.*` when running:
-#   streamlit run app/main.py
-ROOT_DIR = Path(__file__).resolve().parents[1]
+#   streamlit run app/frontend/main.py
+ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 import streamlit as st  # noqa: E402
 
-from app.config import get_settings  # noqa: E402
-from app.utils.api_client import APIClient  # noqa: E402
-from app.utils.session import init_session_state  # noqa: E402
-from app.utils.styles import apply_base_styles  # noqa: E402
-from app.views import account, history, login, metrics, portfolio, trading  # noqa: E402
+from app.frontend.config import get_settings  # noqa: E402
+from app.frontend.utils.api_client import APIClient  # noqa: E402
+from app.frontend.utils.session import init_session_state  # noqa: E402
+from app.frontend.utils.styles import apply_base_styles  # noqa: E402
+from app.frontend.views import account, history, login, metrics, portfolio, trading  # noqa: E402
 
 
 PAGES = {

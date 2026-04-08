@@ -3,8 +3,8 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from app.utils.api_client import APIClient
-from app.utils.portfolio_math import (
+from app.frontend.utils.api_client import APIClient
+from app.frontend.utils.portfolio_math import (
     compute_portfolio_metrics,
     compute_positions,
     market_outcome_price_usd,

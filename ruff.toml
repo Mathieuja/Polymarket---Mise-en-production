@@ -6,7 +6,7 @@ target-version = "py310"
 select = ["E", "F", "I"]
 
 [lint.isort]
-known-first-party = ["app"]
+known-first-party = ["app", "app.frontend"]
 
 [lint.per-file-ignores]
-"app/main.py" = ["E402", "I001"]
+"app/frontend/main.py" = ["E402", "I001"]

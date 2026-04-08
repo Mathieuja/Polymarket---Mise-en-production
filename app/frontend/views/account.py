@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from app.utils.api_client import APIClient
-from app.utils.session import logout
+from app.frontend.utils.api_client import APIClient
+from app.frontend.utils.session import logout
 
 
 def render(api: APIClient) -> None:
