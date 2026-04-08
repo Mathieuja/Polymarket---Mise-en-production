@@ -26,8 +26,16 @@ python -m venv .venv
 
 3) Installer les dépendances
 
+Frontend:
+
 ```bash
 pip install -r app/frontend/requirements.txt
+```
+
+Backend API:
+
+```bash
+pip install -r app/backend/requirements.txt
 ```
 
 4) Configurer les variables d'environnement
@@ -47,6 +55,7 @@ streamlit run app/frontend/main.py
 ## Structure
 
 - `app/frontend/`: frontend Streamlit (pages, client API, fixtures mock)
+- `app/backend/`: backend FastAPI (API routes, schemas, config)
 - `tests/unit/`: tests unitaires (dont tests composants)
 - `tests/integration/`: tests d'integration
 - `ds/`: (à venir) pipeline data science / ingestion
