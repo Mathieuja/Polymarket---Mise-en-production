@@ -34,8 +34,10 @@ def render(api: APIClient) -> None:
     st.session_state.selected_portfolio_id = selected_portfolio_id
     # ---
 
-    st.caption(f"Showing metrics for portfolio: `{selected_portfolio_name}` (`{selected_portfolio_id}`)")
-
+    st.caption(
+        f"Showing metrics for portfolio: `{selected_portfolio_name}` "
+        f"(`{selected_portfolio_id}`)"
+    )
     by_id = {p.get("id"): p for p in portfolios}
     portfolio = by_id[selected_portfolio_id]
     trades = [

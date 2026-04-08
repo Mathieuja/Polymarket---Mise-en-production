@@ -28,8 +28,10 @@ def render(api: APIClient) -> None:
     st.session_state.selected_portfolio_id = selected_portfolio_id
     # ---
 
-    st.caption(f"Showing history for portfolio: `{selected_portfolio_name}` (`{selected_portfolio_id}`)")
-
+    st.caption(
+        f"Showing history for portfolio: `{selected_portfolio_name}` "
+        f"(`{selected_portfolio_id}`)"
+    )
     trades = api.get_trades(token=token)
 
     if not trades:
