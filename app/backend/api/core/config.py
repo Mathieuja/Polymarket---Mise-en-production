@@ -4,7 +4,7 @@ Later will be loaded from environment variables, this will just be the default.
 """
 
 from pydantic import BaseSettings
-import os
+
 
 class Settings(BaseSettings):
     """"""
