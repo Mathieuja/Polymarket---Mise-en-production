@@ -1,2 +1,66 @@
-# Docker/Compose intentionally deferred.
-# This file will be filled once the Streamlit UI (mock mode) and CI are stable.
+# Docker Compose configuration for Polymarket backend development environment
+# This file orchestrates the backend API and PostgreSQL database services
+
+version: '3.8'
+
+services:
+  # PostgreSQL database service
+  db:
+    image: postgres:15-alpine
+    container_name: polymarket-db
+    environment:
+      # PostgreSQL configuration
+      POSTGRES_DB: ${POSTGRES_DB:-polymarket_db}
+      POSTGRES_USER: ${POSTGRES_USER:-polymarket_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-polymarket_password}
+    volumes:
+      # Persist database data across container restarts
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Map port 5432 to host for local development (optional)
+      - "5432:5432"
+    # Health check to verify database is ready
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-polymarket_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - polymarket-network
+
+  # FastAPI backend service
+  backend:
+    build:
+      context: .
+      dockerfile: app/backend/Dockerfile
+    container_name: polymarket-backend
+    environment:
+      # Database connection URL
+      # Uses the service name 'db' as hostname instead of localhost
+      DATABASE_URL: postgresql://${POSTGRES_USER:-polymarket_user}:${POSTGRES_PASSWORD:-polymarket_password}@db:5432/${POSTGRES_DB:-polymarket_db}
+      # Additional backend configuration
+      BACKEND_MODE: ${BACKEND_MODE:-production}
+      APP_NAME: ${APP_NAME:-Polymarket Paper Trading}
+    ports:
+      # Map backend API port to host
+      - "8000:8000"
+    # Only start backend after PostgreSQL is healthy
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - polymarket-network
+    # Optional: mount code volume for live reload during development
+    # Uncomment if you want hot-reload during development
+    # volumes:
+    #   - ./app/backend:/app/app/backend
+
+volumes:
+  # Named volume for PostgreSQL data persistence
+  postgres_data:
+
+networks:
+  # Custom network for inter-service communication
+  polymarket-network:
+    driver: bridge
