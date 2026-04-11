@@ -46,10 +46,22 @@ Variables utilisées par l'app:
 - `BACKEND_MODE`: `mock` (par défaut) ou `api`
 - `API_URL`: base URL de l'API quand `BACKEND_MODE=api` (ex: `http://localhost:8000`)
 
+Variables backend (MVP login en mode API):
+- `JWT_SECRET`: secret pour signer les JWT (dev uniquement)
+- `DEMO_EMAIL` / `DEMO_PASSWORD`: identifiants du compte démo
+
 5) Démarrer Streamlit
 
 ```bash
 streamlit run app/frontend/main.py
+```
+
+## Démarrer l'API (local)
+
+Quand `BACKEND_MODE=api`, Streamlit appelle l'API (dont `POST /auth/login`).
+
+```bash
+uvicorn app.backend.api.main:app --reload --port 8000
 ```
 
 ## Structure
