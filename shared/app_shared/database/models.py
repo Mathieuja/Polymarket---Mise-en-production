@@ -80,7 +80,7 @@ class Market(Base):
     question: Mapped[str] = mapped_column(String(500), nullable=False)
 
     # Market description
-    description: Mapped[str] = mapped_column(String(2000), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)
 
     # Market end date
     end_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
