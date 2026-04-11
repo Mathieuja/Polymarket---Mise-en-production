@@ -6,7 +6,8 @@ These endpoints verify that the database connection is working correctly.
 
 from app_shared.database import Market, User, get_db
 from app_shared.schemas import MarketCreateSchema, MarketSchema
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/db", tags=["database"])
@@ -35,10 +36,10 @@ def test_db_connection(db: Session = Depends(get_db)):
             "market_count": market_count,
         }
     except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Database connection failed: {str(e)}",
-        }
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database connection failed: {str(e)}",
+        )
 
 
 @router.post(
@@ -61,19 +62,15 @@ def create_test_user(
     Returns:
         dict: Created user information
     """
-    try:
-        # Check if user already exists
-        existing_user = db.query(User).filter(User.email == email).first()
-        if existing_user:
-            return {
-                "status": "already_exists",
-                "user": {
-                    "id": existing_user.id,
-                    "name": existing_user.name,
-                    "email": existing_user.email,
-                },
-            }
+    # Check if user already exists
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"User with email '{email}' already exists.",
+        )
 
+    try:
         # Create new user
         user = User(name=name, email=email)
         db.add(user)
@@ -90,10 +87,10 @@ def create_test_user(
         }
     except Exception as e:
         db.rollback()
-        return {
-            "status": "error",
-            "message": f"Failed to create user: {str(e)}",
-        }
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create user: {str(e)}",
+        )
 
 
 @router.get("/markets", response_model=list[MarketSchema], summary="List all markets")
@@ -112,7 +109,10 @@ def list_markets(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
         markets = db.query(Market).offset(skip).limit(limit).all()
         return markets
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 
 @router.post(
@@ -137,6 +137,15 @@ def create_market(market: MarketCreateSchema, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(db_market)
         return db_market
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Market with external_id '{market.external_id}' already exists.",
+        )
     except Exception as e:
         db.rollback()
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create market: {str(e)}",
+        )
