@@ -1,8 +1,5 @@
 # Docker Compose configuration for Polymarket backend development environment
 # This file orchestrates the backend API and PostgreSQL database services
-
-version: '3.8'
-
 services:
   # PostgreSQL database service
   db:

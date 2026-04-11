@@ -1,6 +1,6 @@
 # Multi-stage build optimization: separate layer for dependencies
 # This allows Docker to cache the dependency layer independently from the application code
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Set environment variables to prevent Python from writing bytecode and buffering stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Create a virtual environment to isolate dependencies
 WORKDIR /tmp
-COPY requirements.txt .
+COPY app/backend/requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 
