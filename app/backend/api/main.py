@@ -4,6 +4,7 @@ FastAPI application main file for the backend API.
 
 from contextlib import asynccontextmanager
 
+from app_shared.config import settings
 from app_shared.database import init_db
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,4 +46,5 @@ app.add_middleware(
 
 
 app.include_router(health_router)
-app.include_router(database_router)
+if settings.backend_mode != "production":
+    app.include_router(database_router)
