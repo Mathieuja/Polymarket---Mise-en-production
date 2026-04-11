@@ -62,15 +62,15 @@ def create_test_user(
     Returns:
         dict: Created user information
     """
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.email == email).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"User with email '{email}' already exists.",
-        )
-
     try:
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.email == email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"User with email '{email}' already exists.",
+            )
+
         # Create new user
         user = User(name=name, email=email)
         db.add(user)
@@ -85,6 +85,8 @@ def create_test_user(
                 "email": user.email,
             },
         }
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
