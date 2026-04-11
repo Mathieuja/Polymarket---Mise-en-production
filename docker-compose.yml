@@ -76,6 +76,32 @@ services:
       - ./worker:/app/worker
       - ./shared:/app/shared
 
+  # Streamlit frontend service
+  frontend:
+    build:
+      context: .
+      dockerfile: app/frontend/Dockerfile
+    container_name: polymarket-frontend
+    environment:
+      # Backend API URL for frontend to communicate with
+      API_URL: http://backend:8000
+      # Streamlit configuration
+      STREAMLIT_ENV: ${STREAMLIT_ENV:-development}
+    ports:
+      # Map Streamlit port to host
+      - "8501:8501"
+    # Start after backend is available
+    depends_on:
+      - backend
+    networks:
+      - polymarket-network
+    # Mount code volume for live reload during development
+    volumes:
+      - ./app/frontend:/app
+      - ./shared:/app/shared
+    # Streamlit command with appropriate configuration
+    command: streamlit run main.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+
 volumes:
   # Named volume for PostgreSQL data persistence
   postgres_data:

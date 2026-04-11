@@ -10,18 +10,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy shared package FIRST
-COPY shared /shared
+# Set working directory for build
+WORKDIR /tmp
+
+# Copy shared package to build context
+COPY shared ./shared
 
 # Copy requirements from backend
-WORKDIR /tmp
 COPY app/backend/requirements.txt .
 
-# Install backend requirements
+# Install backend requirements (including ./shared)
 RUN pip install --no-cache-dir --user -r requirements.txt
-
-# Install shared package
-RUN pip install --no-cache-dir --user /shared
 
 
 # Final stage: lean runtime image
