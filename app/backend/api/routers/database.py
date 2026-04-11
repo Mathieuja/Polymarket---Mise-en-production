@@ -5,11 +5,10 @@ These endpoints verify that the database connection is working correctly.
 """
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app_shared.database import get_db, User, Market
-from app_shared.schemas import MarketSchema, MarketCreateSchema
+from app_shared.database import Market, User, get_db
+from app_shared.schemas import MarketCreateSchema, MarketSchema
 
 router = APIRouter(prefix="/db", tags=["database"])
 
@@ -117,7 +116,12 @@ def list_markets(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
         return {"status": "error", "message": str(e)}
 
 
-@router.post("/markets", response_model=MarketSchema, status_code=status.HTTP_201_CREATED, summary="Create a market")
+@router.post(
+    "/markets",
+    response_model=MarketSchema,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a market",
+)
 def create_market(market: MarketCreateSchema, db: Session = Depends(get_db)):
     """
     Create a new market in the database.

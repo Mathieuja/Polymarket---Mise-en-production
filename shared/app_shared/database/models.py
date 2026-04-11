@@ -8,7 +8,7 @@ Models are shared between backend and worker to ensure consistency.
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, DateTime, Float, Boolean
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app_shared.database.base import Base
@@ -102,4 +102,5 @@ class Market(Base):
 
     def __repr__(self) -> str:
         """String representation of Market instance."""
-        return f"<Market(id={self.id}, external_id={self.external_id}, question={self.question[:50]})>"
+        question_short = self.question[:50]
+        return f"<Market(id={self.id}, external_id={self.external_id}, question={question_short})>"
