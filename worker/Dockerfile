@@ -9,18 +9,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy shared package FIRST (needed for editable install)
-COPY shared /shared
+# Set working directory for build
+WORKDIR /tmp
+
+# Copy shared package to build context
+COPY shared ./shared
 
 # Copy requirements
-WORKDIR /tmp
 COPY worker/requirements.txt .
 
-# Install worker requirements
+# Install worker requirements (including ./shared)
 RUN pip install --no-cache-dir --user -r requirements.txt
-
-# Install shared package
-RUN pip install --no-cache-dir --user /shared
 
 
 # Runtime stage
