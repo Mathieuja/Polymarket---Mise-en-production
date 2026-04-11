@@ -7,7 +7,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.backend.api.routers import health_router
+from app.backend.api.routers import health_router, database_router
+from app.backend.database.database import init_db
 
 
 @asynccontextmanager
@@ -18,6 +19,8 @@ async def lifespan(app: FastAPI):
     At startup, initializes database connections, loads configuration, etc.
     At shutdown, handles all deconnections, cleanup, etc.
     """
+    # Initialize database tables on startup
+    init_db()
     app.state.is_started = True
 
     yield
@@ -42,3 +45,4 @@ app.add_middleware(
 
 
 app.include_router(health_router)
+app.include_router(database_router)
