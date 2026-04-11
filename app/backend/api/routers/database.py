@@ -4,11 +4,10 @@ Database test endpoints for development and verification.
 These endpoints verify that the database connection is working correctly.
 """
 
+from app_shared.database import Market, User, get_db
+from app_shared.schemas import MarketCreateSchema, MarketSchema
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
-
-from app_shared.database import get_db, Market, User
-from app_shared.schemas import MarketCreateSchema, MarketSchema
 
 router = APIRouter(prefix="/db", tags=["database"])
 
