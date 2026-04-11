@@ -7,17 +7,17 @@ Exports:
     - SessionLocal: Session factory
     - get_db: FastAPI dependency for database injection
     - init_db: Function to initialize all database tables
-    - User: User ORM model
+    - User, Market: ORM models
 """
 
-from app.backend.database.database import (
-    Base,
+from app_shared.database.base import Base
+from app_shared.database.database import (
     engine,
     SessionLocal,
     get_db,
     init_db,
 )
-from app.backend.database.models import User
+from app_shared.database.models import User, Market
 
 __all__ = [
     "Base",
@@ -26,4 +26,5 @@ __all__ = [
     "get_db",
     "init_db",
     "User",
+    "Market",
 ]

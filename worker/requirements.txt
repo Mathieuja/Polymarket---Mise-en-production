@@ -1,0 +1,7 @@
+# Worker application for Polymarket data ingestion and processing
+# Reuses shared package with backend
+
+fastapi>=0.110
+uvicorn[standard]>=0.29
+httpx>=0.27
+python-dotenv>=1.0

@@ -5,10 +5,11 @@ These endpoints verify that the database connection is working correctly.
 """
 
 from fastapi import APIRouter, Depends, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.backend.database.database import get_db
-from app.backend.database.models import User
+from app_shared.database import get_db, User, Market
+from app_shared.schemas import MarketSchema, MarketCreateSchema
 
 router = APIRouter(prefix="/db", tags=["database"])
 
@@ -28,10 +29,12 @@ def test_db_connection(db: Session = Depends(get_db)):
     try:
         # Simple query to verify database connection
         user_count = db.query(User).count()
+        market_count = db.query(Market).count()
         return {
             "status": "ok",
             "message": "Database connection successful",
             "user_count": user_count,
+            "market_count": market_count,
         }
     except Exception as e:
         return {
@@ -93,3 +96,44 @@ def create_test_user(
             "status": "error",
             "message": f"Failed to create user: {str(e)}",
         }
+
+
+@router.get("/markets", response_model=list[MarketSchema], summary="List all markets")
+def list_markets(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+    """
+    List all markets from the database.
+
+    Args:
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+
+    Returns:
+        list: List of markets
+    """
+    try:
+        markets = db.query(Market).offset(skip).limit(limit).all()
+        return markets
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@router.post("/markets", response_model=MarketSchema, status_code=status.HTTP_201_CREATED, summary="Create a market")
+def create_market(market: MarketCreateSchema, db: Session = Depends(get_db)):
+    """
+    Create a new market in the database.
+
+    Args:
+        market: Market data
+
+    Returns:
+        Market: Created market with ID and timestamps
+    """
+    try:
+        db_market = Market(**market.model_dump())
+        db.add(db_market)
+        db.commit()
+        db.refresh(db_market)
+        return db_market
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}

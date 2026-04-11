@@ -10,24 +10,16 @@ This module handles:
 from os import getenv
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
+
+from app_shared.database.base import Base
 
 # Get database URL from environment variable
-# Format: postgresql://user:password@host:port/database
+# Format: postgresql+psycopg://user:password@host:port/database
 DATABASE_URL = getenv(
     "DATABASE_URL",
     "postgresql+psycopg://polymarket_user:polymarket_password@db:5432/polymarket_db",
 )
-
-
-class Base(DeclarativeBase):
-    """
-    Base class for all SQLAlchemy ORM models.
-
-    All models should inherit from this class to use the declarative ORM system.
-    """
-
-    pass
 
 
 # Create SQLAlchemy engine
@@ -53,7 +45,7 @@ def get_db() -> Session:
 
     Usage:
         from fastapi import Depends
-        from app.backend.database.database import get_db
+        from app_shared.database import get_db
 
         @app.get("/items")
         def get_items(db: Session = Depends(get_db)):
