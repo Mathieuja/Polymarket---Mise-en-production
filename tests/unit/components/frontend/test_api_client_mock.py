@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from app.utils.api_client import APIClient
+import pytest
+
+from app.frontend.utils.api_client import APIClient
+
+pytestmark = [pytest.mark.unit, pytest.mark.component]
 
 
 def test_mock_markets_loads_fixtures():

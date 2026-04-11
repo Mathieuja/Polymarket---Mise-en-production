@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from app.utils.api_client import APIClient
+from app.frontend.utils.api_client import APIClient
 
 
 def render(api: APIClient) -> None:

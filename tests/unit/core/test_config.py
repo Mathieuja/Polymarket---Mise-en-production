@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from app.config import get_settings
+import pytest
+
+from app.frontend.config import get_settings
+
+pytestmark = pytest.mark.unit
 
 
 def test_get_settings_defaults(monkeypatch):

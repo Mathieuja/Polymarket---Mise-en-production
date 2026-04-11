@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from app.utils.api_client import APIClient, APIClientError
+from app.frontend.utils.api_client import APIClient, APIClientError
 
 
 def render(api: APIClient) -> None:
