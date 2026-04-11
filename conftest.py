@@ -25,9 +25,10 @@ def mock_database_initialization(monkeypatch: pytest.MonkeyPatch) -> None:
     This fixture automatically applies to all tests, mocking the init_db()
     function so that tests don't try to connect to a real database.
     """
-    # Mock the init_db function from app_shared.database
+    # Mock the init_db function where it's used (in app.backend.api.main)
+    # rather than where it's defined, since it's already imported
     mock_init_db = MagicMock()
-    monkeypatch.setattr("app_shared.database.init_db", mock_init_db)
+    monkeypatch.setattr("app.backend.api.main.init_db", mock_init_db)
 
 
 
