@@ -7,8 +7,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.backend.api.routers import database_router, health_router
 from app_shared.database import init_db
+from app.backend.api.routers import database_router, health_router
+
+
+
 
 
 @asynccontextmanager
