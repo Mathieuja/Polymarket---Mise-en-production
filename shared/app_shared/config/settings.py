@@ -5,7 +5,10 @@ Reads configuration from environment variables with sensible defaults.
 Compatible with .env files via python-dotenv.
 """
 
-from pydantic_settings import BaseSettings
+try:
+    from pydantic_settings import BaseSettings
+except ModuleNotFoundError:
+    from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
