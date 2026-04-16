@@ -1,2 +1,112 @@
-# Docker/Compose intentionally deferred.
-# This file will be filled once the Streamlit UI (mock mode) and CI are stable.
+# Docker Compose configuration for Polymarket development environment
+# This file orchestrates the backend API, worker, and PostgreSQL database services
+# Build context is the project root to access both backend, worker, and shared packages
+
+services:
+  # PostgreSQL database service
+  db:
+    image: postgres:15-alpine
+    container_name: polymarket-db
+    environment:
+      # PostgreSQL configuration
+      POSTGRES_DB: ${POSTGRES_DB:-polymarket_db}
+      POSTGRES_USER: ${POSTGRES_USER:-polymarket_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-polymarket_password}
+    volumes:
+      # Persist database data across container restarts
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Map port 5432 to host for local development (optional)
+      - "5432:5432"
+    # Health check to verify database is ready
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-polymarket_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - polymarket-network
+
+  # FastAPI backend service
+  backend:
+    build:
+      context: .
+      dockerfile: app/backend/Dockerfile
+    container_name: polymarket-backend
+    environment:
+      # Database connection URL using service name 'db'
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-polymarket_user}:${POSTGRES_PASSWORD:-polymarket_password}@db:5432/${POSTGRES_DB:-polymarket_db}
+      # Additional backend configuration
+      BACKEND_MODE: ${BACKEND_MODE:-development}
+      APP_NAME: ${APP_NAME:-Polymarket Paper Trading}
+    ports:
+      # Map backend API port to host
+      - "8000:8000"
+    # Only start backend after PostgreSQL is healthy
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - polymarket-network
+    # Optional: mount code volume for live reload during development
+    volumes:
+      - ./app/backend:/app/app/backend
+      - ./shared:/app/shared
+
+  # Worker service for data ingestion
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: polymarket-worker
+    environment:
+      # Database connection URL using service name 'db'
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-polymarket_user}:${POSTGRES_PASSWORD:-polymarket_password}@db:5432/${POSTGRES_DB:-polymarket_db}
+      # Worker configuration
+      BACKEND_MODE: ${BACKEND_MODE:-development}
+    # Start after PostgreSQL is healthy
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - polymarket-network
+    # Optional: enable for development
+    volumes:
+      - ./worker:/app/worker
+      - ./shared:/app/shared
+
+  # Streamlit frontend service
+  frontend:
+    build:
+      context: .
+      dockerfile: app/frontend/Dockerfile
+    container_name: polymarket-frontend
+    environment:
+      # Backend API URL for frontend to communicate with
+      API_URL: http://backend:8000
+      # Streamlit configuration
+      STREAMLIT_ENV: ${STREAMLIT_ENV:-development}
+    ports:
+      # Map Streamlit port to host
+      - "8501:8501"
+    # Start after backend is available
+    depends_on:
+      - backend
+    networks:
+      - polymarket-network
+    # Mount code volume for live reload during development
+    volumes:
+      - ./app/frontend:/app
+      - ./shared:/app/shared
+    # Streamlit command with appropriate configuration
+    command: streamlit run main.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+
+volumes:
+  # Named volume for PostgreSQL data persistence
+  postgres_data:
+
+networks:
+  # Custom network for inter-service communication
+  polymarket-network:
+    driver: bridge
