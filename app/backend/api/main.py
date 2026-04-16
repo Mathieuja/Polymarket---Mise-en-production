@@ -4,7 +4,6 @@ FastAPI application main file for the backend API.
 
 from contextlib import asynccontextmanager
 
-from app_shared.config import settings
 from app_shared.database import init_db
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
