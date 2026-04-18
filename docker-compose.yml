@@ -7,6 +7,10 @@ services:
   db:
     image: postgres:15-alpine
     container_name: polymarket-db
+    command:
+      - postgres
+      - -c
+      - log_min_error_statement=panic
     environment:
       # PostgreSQL configuration
       POSTGRES_DB: ${POSTGRES_DB:-polymarket_db}
@@ -20,7 +24,7 @@ services:
       - "5432:5432"
     # Health check to verify database is ready
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-polymarket_user}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-polymarket_user} -d ${POSTGRES_DB:-polymarket_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,6 +44,14 @@ services:
       # Additional backend configuration
       BACKEND_MODE: ${BACKEND_MODE:-development}
       APP_NAME: ${APP_NAME:-Polymarket Paper Trading}
+      S3_RAW_BUCKET: ${S3_RAW_BUCKET:-}
+      S3_RAW_PREFIX: ${S3_RAW_PREFIX:-polymarket/raw}
+      AWS_ENDPOINT: ${AWS_ENDPOINT:-}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+      AWS_REGION: ${AWS_REGION:-eu-west-3}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
     ports:
       # Map backend API port to host
       - "8000:8000"
@@ -65,6 +77,16 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-polymarket_user}:${POSTGRES_PASSWORD:-polymarket_password}@db:5432/${POSTGRES_DB:-polymarket_db}
       # Worker configuration
       BACKEND_MODE: ${BACKEND_MODE:-development}
+      WORKER_CONSOLE_LOG_LEVEL: ${WORKER_CONSOLE_LOG_LEVEL:-INFO}
+      WORKER_MODE: raw
+      S3_RAW_BUCKET: ${S3_RAW_BUCKET}
+      S3_RAW_PREFIX: ${S3_RAW_PREFIX:-polymarket/raw}
+      AWS_ENDPOINT: ${AWS_ENDPOINT:-}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+      AWS_REGION: ${AWS_REGION:-eu-west-3}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
     # Start after PostgreSQL is healthy
     depends_on:
       db:
@@ -72,6 +94,34 @@ services:
     networks:
       - polymarket-network
     # Optional: enable for development
+    volumes:
+      - ./worker:/app/worker
+      - ./shared:/app/shared
+
+  transform-worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: polymarket-transform-worker
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-polymarket_user}:${POSTGRES_PASSWORD:-polymarket_password}@db:5432/${POSTGRES_DB:-polymarket_db}
+      WORKER_MODE: transform
+      WORKER_CONSOLE_LOG_LEVEL: ${WORKER_CONSOLE_LOG_LEVEL:-INFO}
+      S3_RAW_BUCKET: ${S3_RAW_BUCKET}
+      S3_RAW_PREFIX: ${S3_RAW_PREFIX:-polymarket/raw}
+      AWS_ENDPOINT: ${AWS_ENDPOINT:-}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+      AWS_REGION: ${AWS_REGION:-eu-west-3}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      TRANSFORM_POLL_INTERVAL_SECONDS: ${TRANSFORM_POLL_INTERVAL_SECONDS:-20}
+      TRANSFORM_BATCH_LIMIT: ${TRANSFORM_BATCH_LIMIT:-5}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - polymarket-network
     volumes:
       - ./worker:/app/worker
       - ./shared:/app/shared
