@@ -1,5 +1,1 @@
-"""
-Services for Polymarket data ingestion and transformation.
-"""
-
-# Placeholder for future services
+"""Worker services for raw ingestion and transform/load pipeline."""

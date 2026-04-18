@@ -1,18 +1,11 @@
-"""
-Database connection and session management for SQLAlchemy.
-
-This module handles:
-- SQLAlchemy engine creation from DATABASE_URL environment variable
-- Base class for all ORM models
-- Session factory and dependency injection for FastAPI
-"""
+"""Database connection and session management for SQLAlchemy."""
 
 from os import getenv
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app_shared.database.base import Base
+from app_shared.database.migrations import run_migrations
 
 # Get database URL from environment variable
 # Format: postgresql+psycopg://user:password@host:port/database
@@ -63,9 +56,10 @@ def get_db() -> Session:
 
 def init_db():
     """
-    Initialize database tables.
+    Initialize database schema through versioned migrations.
 
-    This should be called during application startup to create all tables
-    defined by the ORM models (if they don't already exist).
+    The project uses a lightweight migration runner stored in
+    ``app_shared.database.migrations`` so schema changes stay versioned and can
+    be applied to existing PostgreSQL volumes without manual intervention.
     """
-    Base.metadata.create_all(bind=engine)
+    run_migrations(engine)
