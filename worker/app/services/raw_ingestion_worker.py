@@ -121,7 +121,11 @@ class RawIngestionWorker:
     def _record_batch(self, *, batch_id: str, sync_type: str, s3_key: str, row_count: int) -> None:
         now = datetime.now(timezone.utc)
         with SessionLocal() as session:
-            existing = session.query(IngestionBatch).filter(IngestionBatch.batch_id == batch_id).first()
+            existing = (
+                session.query(IngestionBatch)
+                .filter(IngestionBatch.batch_id == batch_id)
+                .first()
+            )
             if existing is not None:
                 return
 
@@ -153,7 +157,13 @@ class RawIngestionWorker:
                 return state.updated_at
         return None
 
-    async def _sync(self, *, sync_id: str, sync_type: str, filters: dict[str, Any]) -> dict[str, Any]:
+    async def _sync(
+        self,
+        *,
+        sync_id: str,
+        sync_type: str,
+        filters: dict[str, Any],
+    ) -> dict[str, Any]:
         offset = 0
         total_fetched = 0
         start = datetime.now(timezone.utc)

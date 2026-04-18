@@ -6,8 +6,8 @@ import asyncio
 import os
 
 if __package__ in {None, ""}:
-    from pathlib import Path
     import sys
+    from pathlib import Path
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from services.raw_ingestion_worker import main as run_raw_worker

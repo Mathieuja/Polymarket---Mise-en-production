@@ -5,7 +5,6 @@ from os import getenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app_shared.database.base import Base
 from app_shared.database.migrations import run_migrations
 
 # Get database URL from environment variable

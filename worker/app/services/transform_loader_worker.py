@@ -151,7 +151,10 @@ class TransformLoaderWorker:
             conn = duckdb.connect(database=":memory:")
             try:
                 result = conn.execute(
-                    "SELECT * FROM read_json_auto(?, format='newline_delimited', ignore_errors=true)",
+                    (
+                        "SELECT * FROM read_json_auto(?, "
+                        "format='newline_delimited', ignore_errors=true)"
+                    ),
                     [tmp.name],
                 )
                 columns = [description[0] for description in result.description]
