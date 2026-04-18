@@ -20,7 +20,10 @@ from app.frontend.utils.ui import (
 def render(api: APIClient) -> None:
     render_page_header(
         "Trade history",
-        "Review the sequence of paper trades that built the current portfolio, then export the log for analysis or presentation.",
+        (
+            "Review the sequence of paper trades that built the current "
+            "portfolio, then export the log for analysis or presentation."
+        ),
         eyebrow="History",
         badge_label="Execution log",
         badge_tone="brand",
@@ -36,7 +39,10 @@ def render(api: APIClient) -> None:
     if not trades:
         render_empty_state(
             "There is no trade history yet.",
-            "Once you submit a paper trade, this page becomes the source of truth for your execution trail.",
+            (
+                "Once you submit a paper trade, this page becomes the source "
+                "of truth for your execution trail."
+            ),
         )
         return
 
@@ -52,8 +58,16 @@ def render(api: APIClient) -> None:
         return
 
     df = pd.DataFrame(trades)
-    buy_count = int((df["action"].astype(str).str.upper() == "BUY").sum()) if "action" in df else 0
-    sell_count = int((df["action"].astype(str).str.upper() == "SELL").sum()) if "action" in df else 0
+    buy_count = (
+        int((df["action"].astype(str).str.upper() == "BUY").sum())
+        if "action" in df
+        else 0
+    )
+    sell_count = (
+        int((df["action"].astype(str).str.upper() == "SELL").sum())
+        if "action" in df
+        else 0
+    )
     render_kpi_row(
         [
             {"label": "Trades", "value": str(len(df))},

@@ -11,11 +11,11 @@ from app.frontend.utils.portfolio_math import (
     market_outcome_price_usd,
 )
 from app.frontend.utils.ui import (
-    render_api_error_state,
     dataframe_with_default_style,
     format_currency,
     format_probability,
     format_signed_currency,
+    render_api_error_state,
     render_empty_state,
     render_kpi_row,
     render_page_header,
@@ -26,7 +26,10 @@ from app.frontend.utils.ui import (
 def render(api: APIClient) -> None:
     render_page_header(
         "Performance metrics",
-        "This screen translates trades into portfolio value: cash left, mark-to-market exposure, and PnL in one place.",
+        (
+            "This screen translates trades into portfolio value: cash left, "
+            "mark-to-market exposure, and PnL in one place."
+        ),
         eyebrow="Metrics",
         badge_label="Portfolio analytics",
         badge_tone="brand",
@@ -43,7 +46,10 @@ def render(api: APIClient) -> None:
     if not portfolios:
         render_empty_state(
             "Metrics appear after you create a portfolio.",
-            "Once a portfolio exists, this page can summarize value, exposure, and current mark-to-market performance.",
+            (
+                "Once a portfolio exists, this page can summarize value, "
+                "exposure, and current mark-to-market performance."
+            ),
         )
         return
 
@@ -80,7 +86,10 @@ def render(api: APIClient) -> None:
     if not trades:
         render_empty_state(
             "This portfolio has no trades yet.",
-            "Place a first paper trade in the trading workspace and this page will begin surfacing live-looking metrics.",
+            (
+                "Place a first paper trade in the trading workspace and this "
+                "page will begin surfacing live-looking metrics."
+            ),
         )
         return
 
@@ -127,7 +136,11 @@ def render(api: APIClient) -> None:
                 "value": "Marked value",
             }
         )
-        st.dataframe(dataframe_with_default_style(display_df), use_container_width=True, hide_index=True)
+        st.dataframe(
+            dataframe_with_default_style(display_df),
+            use_container_width=True,
+            hide_index=True,
+        )
 
         chart_df = df.sort_values("value", ascending=True)
         fig = px.bar(

@@ -45,7 +45,10 @@ def _build_price_chart(prices_df: pd.DataFrame) -> go.Figure:
 def render(api: APIClient) -> None:
     render_page_header(
         "Trading workspace",
-        "Read the current signal, compare YES and NO probabilities, then place a simulated trade with clean sizing and pricing controls.",
+        (
+            "Read the current signal, compare YES and NO probabilities, then "
+            "place a simulated trade with clean sizing and pricing controls."
+        ),
         eyebrow="Market view",
         badge_label="Paper trading",
         badge_tone="brand",
@@ -62,14 +65,20 @@ def render(api: APIClient) -> None:
     if not markets:
         render_empty_state(
             "No markets are available right now.",
-            "Load fixture data or connect the API mode so the trading workspace can surface active prediction markets.",
+            (
+                "Load fixture data or connect the API mode so the trading "
+                "workspace can surface active prediction markets."
+            ),
         )
         return
 
     if not portfolios:
         render_empty_state(
             "Create a portfolio before placing your first trade.",
-            "The trading ticket needs a target portfolio so it can track cash, exposure, and future performance.",
+            (
+                "The trading ticket needs a target portfolio so it can track "
+                "cash, exposure, and future performance."
+            ),
         )
         return
 
@@ -93,7 +102,9 @@ def render(api: APIClient) -> None:
             "Market selection",
             "Choose the contract and portfolio you want to use for this simulation.",
         )
-        portfolio_label_map = {str(p.get("id")): f"{p.get('name')} ({p.get('id')})" for p in portfolios}
+        portfolio_label_map = {
+            str(p.get("id")): f"{p.get('name')} ({p.get('id')})" for p in portfolios
+        }
         selected_portfolio_id = st.selectbox(
             "Portfolio",
             options=portfolio_ids,
@@ -117,7 +128,10 @@ def render(api: APIClient) -> None:
 
         render_info_card(
             "How to read this screen",
-            "The YES price can be read as the market-implied probability of the event. Use the NO side when you want the complementary view.",
+            (
+                "The YES price can be read as the market-implied probability "
+                "of the event. Use the NO side when you want the complementary view."
+            ),
             tone="brand",
         )
 
@@ -127,7 +141,10 @@ def render(api: APIClient) -> None:
             f"""
             <section class="market-summary">
               <div class="market-summary__title">{market.get('title')}</div>
-              <p>The market card highlights the current probability split and a short recent price history so you can place a trade with context.</p>
+              <p>
+                The market card highlights the current probability split and a short
+                recent price history so you can place a trade with context.
+              </p>
               <div class="split-pills">
                 <div class="split-pill split-pill--yes">
                   <div class="split-pill__label">YES</div>
@@ -159,7 +176,11 @@ def render(api: APIClient) -> None:
                 "Price signal",
                 "A compact view of how the YES probability moved over the latest observed points.",
             )
-            st.plotly_chart(_build_price_chart(prices_df), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(
+                _build_price_chart(prices_df),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
 
     render_section_header(
         "Trade ticket",
@@ -178,7 +199,9 @@ def render(api: APIClient) -> None:
 
     price = st.slider("Price", min_value=0.0, max_value=1.0, value=float(default_price), step=0.01)
     st.caption(
-        f"Ticket preview: {action} {format_quantity(qty)} contract(s) on {outcome} at {format_probability(price)}."
+        "Ticket preview: "
+        f"{action} {format_quantity(qty)} contract(s) on {outcome} "
+        f"at {format_probability(price)}."
     )
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
 

@@ -103,7 +103,10 @@ def render_kpi_row(items: list[dict[str, Any]]) -> None:
         delta = item.get("delta")
         tone = item.get("tone", "neutral")
         delta_html = (
-            f'<div class="kpi-card__delta kpi-card__delta--{escape(tone)}">{escape(str(delta))}</div>'
+            (
+                f'<div class="kpi-card__delta kpi-card__delta--{escape(tone)}">'
+                f"{escape(str(delta))}</div>"
+            )
             if delta
             else ""
         )
@@ -138,20 +141,24 @@ def render_api_error_state(exc: Exception, *, resource: str) -> None:
         if "Connection refused" in message or "Failed to establish a new connection" in message:
             title = "Backend unavailable"
             body = (
-                f"The app is configured to use the API for {resource}, but the backend is not reachable. "
+                f"The app is configured to use the API for {resource}, "
+                "but the backend is not reachable. "
                 "Start the API server or switch to mock mode for a fully guided UI demo."
             )
         elif "404" in message:
             title = "API connected, endpoint not ready yet"
             body = (
-                f"The backend responded, but the endpoint needed for {resource} is not implemented yet. "
-                "The visual flow remains available, but this section cannot load live API data for now."
+                f"The backend responded, but the endpoint needed for {resource} "
+                "is not implemented yet. "
+                "The visual flow remains available, but this section cannot load "
+                "live API data for now."
             )
         else:
             title = "Data could not be loaded"
             body = (
                 f"The app could not fetch {resource} from the API. "
-                "This is shown as a product-style fallback so the UI stays readable during development."
+                "This is shown as a product-style fallback so the UI stays "
+                "readable during development."
             )
     else:
         title = "Something unexpected happened"

@@ -6,10 +6,10 @@ import streamlit as st
 from app.frontend.utils.api_client import APIClient, APIClientError
 from app.frontend.utils.portfolio_math import compute_portfolio_metrics
 from app.frontend.utils.ui import (
-    render_api_error_state,
     dataframe_with_default_style,
     format_currency,
     format_signed_currency,
+    render_api_error_state,
     render_empty_state,
     render_kpi_row,
     render_page_header,
@@ -20,7 +20,11 @@ from app.frontend.utils.ui import (
 def render(api: APIClient) -> None:
     render_page_header(
         "Portfolio overview",
-        "Keep the portfolio experience simple: select a wallet, review its current value, then create a fresh one when you want a new simulation track.",
+        (
+            "Keep the portfolio experience simple: select a wallet, review "
+            "its current value, then create a fresh one when you want a new "
+            "simulation track."
+        ),
         eyebrow="Portfolio",
         badge_label="Value tracking",
         badge_tone="brand",
@@ -37,7 +41,10 @@ def render(api: APIClient) -> None:
     if portfolios:
         render_section_header(
             "Active portfolio",
-            "Choose the portfolio that should drive portfolio, metrics, and history views across the app.",
+            (
+                "Choose the portfolio that should drive portfolio, metrics, "
+                "and history views across the app."
+            ),
         )
         by_id = {p.get("id"): p for p in portfolios}
 
@@ -86,7 +93,10 @@ def render(api: APIClient) -> None:
     else:
         render_empty_state(
             "No portfolio has been created yet.",
-            "Create one below to start tracking paper trades, cash, and eventual portfolio performance.",
+            (
+                "Create one below to start tracking paper trades, cash, and "
+                "eventual portfolio performance."
+            ),
         )
 
     render_section_header(
@@ -105,7 +115,11 @@ def render(api: APIClient) -> None:
 
     if submitted:
         try:
-            created = api.create_portfolio(name=name, initial_cash_usd=float(initial_cash), token=token)
+            created = api.create_portfolio(
+                name=name,
+                initial_cash_usd=float(initial_cash),
+                token=token,
+            )
         except APIClientError as exc:
             render_api_error_state(exc, resource="portfolio creation")
             return

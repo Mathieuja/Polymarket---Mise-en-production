@@ -62,7 +62,11 @@ def _render_sidebar() -> str:
     )
     st.session_state.nav_page = selected
 
-    auth_badge = badge_html("Signed in", "success") if is_authenticated else badge_html("Preview", "warning")
+    auth_badge = (
+        badge_html("Signed in", "success")
+        if is_authenticated
+        else badge_html("Preview", "warning")
+    )
     st.sidebar.markdown(
         f"""
         <section class="sidebar-panel">
@@ -89,7 +93,9 @@ def _render_sidebar() -> str:
         """
         <section class="sidebar-panel">
           <p><strong>Demo focus</strong></p>
-          <p style="margin-top:0.45rem;">Read the market, place paper trades, and follow how portfolio value evolves over time.</p>
+          <p style="margin-top:0.45rem;">
+            Read the market, place paper trades, and follow how portfolio value evolves over time.
+          </p>
         </section>
         """,
         unsafe_allow_html=True,
