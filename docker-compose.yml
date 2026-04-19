@@ -3,6 +3,20 @@
 # Build context is the project root to access both backend, worker, and shared packages
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: polymarket-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - polymarket-network
+
   # PostgreSQL database service
   db:
     image: postgres:15-alpine
@@ -119,6 +133,30 @@ services:
       TRANSFORM_BATCH_LIMIT: ${TRANSFORM_BATCH_LIMIT:-5}
     depends_on:
       db:
+        condition: service_healthy
+    networks:
+      - polymarket-network
+    volumes:
+      - ./worker:/app/worker
+      - ./shared:/app/shared
+
+  live-data-worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: polymarket-live-data-worker
+    environment:
+      WORKER_MODE: live_data
+      WORKER_CONSOLE_LOG_LEVEL: ${WORKER_CONSOLE_LOG_LEVEL:-INFO}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_STREAM_KEY: ${REDIS_STREAM_KEY:-polymarket:market_stream}
+      REDIS_JSON_KEY: ${REDIS_JSON_KEY:-polymarket:messages_json}
+      REDIS_CONTROL_CHANNEL: ${REDIS_CONTROL_CHANNEL:-live-data-control}
+      API_KEY: ${API_KEY:-}
+      CLOB_WS_URL: ${CLOB_WS_URL:-wss://ws-subscriptions-clob.polymarket.com/ws/market}
+    depends_on:
+      redis:
         condition: service_healthy
     networks:
       - polymarket-network
