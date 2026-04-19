@@ -14,6 +14,7 @@ from app.backend.api.routers import (
     health_router,
     market_stream_router,
     markets_router,
+    users_router,
 )
 
 
@@ -53,5 +54,6 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(debug_router)
+app.include_router(users_router)
 app.include_router(markets_router)
 app.include_router(market_stream_router)

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta, timezone
-from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
-from jose import jwt
+from app_shared.database import User, get_db
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from app.backend.api.core.security import create_access_token, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -32,27 +33,13 @@ def _require_env(name: str) -> str:
     return value
 
 
-def _create_access_token(payload: dict[str, Any], expires_minutes: int = 60) -> str:
-    secret = _require_env("JWT_SECRET")
-    now = datetime.now(timezone.utc)
-    exp = now + timedelta(minutes=expires_minutes)
-
-    to_encode = {
-        **payload,
-        "iat": int(now.timestamp()),
-        "exp": int(exp.timestamp()),
-    }
-    return jwt.encode(to_encode, secret, algorithm="HS256")
-
-
 @router.post(
     "/login",
-    summary="Login (demo user MVP)",
+    summary="Login user",
     response_model=LoginResponse,
 )
-async def login(body: LoginRequest) -> LoginResponse:
-    demo_email = _require_env("DEMO_EMAIL").lower()
-    demo_password = _require_env("DEMO_PASSWORD")
+async def login(body: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse:
+    _require_env("JWT_SECRET")
 
     email = str(body.email).strip().lower()
     password = body.password or ""
@@ -60,8 +47,25 @@ async def login(body: LoginRequest) -> LoginResponse:
     if not email or "@" not in email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email")
 
-    if email != demo_email or password != demo_password:
+    backend_mode = os.getenv("BACKEND_MODE", "").strip().lower()
+    demo_email = os.getenv("DEMO_EMAIL", "").strip().lower()
+    demo_password = os.getenv("DEMO_PASSWORD", "")
+    if backend_mode != "api" and demo_email and demo_password:
+        if email != demo_email or password != demo_password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials",
+            )
+
+        token = create_access_token({"sub": email})
+        return LoginResponse(access_token=token, email=email)
+
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    token = _create_access_token({"sub": email})
+    if not verify_password(password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    token = create_access_token({"sub": email})
     return LoginResponse(access_token=token, email=email)

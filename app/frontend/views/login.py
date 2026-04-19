@@ -34,6 +34,13 @@ def render(api: APIClient) -> None:
         )
         return
 
+    if "login_email_input" not in st.session_state:
+        st.session_state.login_email_input = ""
+    if "prefill_login_email" in st.session_state:
+      st.session_state.login_email_input = st.session_state.pop("prefill_login_email")
+    if "auth_notice" in st.session_state:
+        st.success(st.session_state.pop("auth_notice"))
+
     left, right = st.columns([1.15, 0.85], gap="large")
 
     with left:
@@ -99,36 +106,123 @@ def render(api: APIClient) -> None:
         )
 
     with right:
-        with st.form("login_form"):
-            st.markdown(
-                """
-                <div class="section-header">
-                  <div>
-                    <h3>Sign in to the demo</h3>
-                    <p>Use the demo account configured for the current environment.</p>
-                  </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            email = st.text_input("Email", placeholder="demo@example.com")
-            password = st.text_input("Password", type="password", placeholder="Enter password")
-            submitted = st.form_submit_button("Enter paper trading workspace", type="primary")
+        tab_signin, tab_signup = st.tabs(["Sign in", "Create account"])
+
+        submitted_login = False
+        login_email = ""
+        login_password = ""
+        submitted_signup = False
+        signup_name = ""
+        signup_email = ""
+        signup_password = ""
+        signup_confirm_password = ""
+
+        with tab_signin:
+            with st.form("login_form"):
+                st.markdown(
+                    """
+                    <div class="section-header">
+                      <div>
+                        <h3>Sign in to your account</h3>
+                        <p>Access your portfolio, history, and market workspace.</p>
+                      </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                login_email = st.text_input(
+                    "Email",
+                    placeholder="you@example.com",
+                    key="login_email_input",
+                )
+                login_password = st.text_input(
+                    "Password",
+                    type="password",
+                    placeholder="Enter password",
+                    key="login_password_input",
+                )
+                submitted_login = st.form_submit_button(
+                    "Enter paper trading workspace",
+                    type="primary",
+                )
+
+        with tab_signup:
+            with st.form("signup_form"):
+                st.markdown(
+                    """
+                    <div class="section-header">
+                      <div>
+                        <h3>Create your account</h3>
+                        <p>Set up a secure account to use API mode authentication.</p>
+                      </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                signup_name = st.text_input(
+                    "Full name",
+                    placeholder="Jane Doe",
+                    key="signup_name_input",
+                )
+                signup_email = st.text_input(
+                    "Email",
+                    placeholder="you@example.com",
+                    key="signup_email_input",
+                )
+                signup_password = st.text_input(
+                    "Password",
+                    type="password",
+                    placeholder="At least 8 characters",
+                    key="signup_password_input",
+                )
+                signup_confirm_password = st.text_input(
+                    "Confirm password",
+                    type="password",
+                    placeholder="Re-enter password",
+                    key="signup_confirm_password_input",
+                )
+                submitted_signup = st.form_submit_button("Create account", type="primary")
 
         st.caption(
-            "This login flow is intentionally lightweight and designed for "
-            "product demonstration."
+            "In API mode, account creation and sign-in are backed by the backend database."
         )
 
-    if submitted:
+    if submitted_login:
+        if not login_email.strip() or not login_password:
+            st.error("Email and password are required")
+            return
+
         try:
-            data = api.login(email=email, password=password)
+            data = api.login(email=login_email, password=login_password)
         except APIClientError as exc:
             st.error(str(exc))
             return
 
         st.session_state.is_authenticated = True
         st.session_state.token = data.get("access_token")
-        st.session_state.user_email = data.get("email", email)
+        st.session_state.user_email = data.get("email", login_email)
         st.session_state.nav_page = "Trading"
+        st.rerun()
+
+    if submitted_signup:
+        if not signup_name.strip() or not signup_email.strip() or not signup_password:
+            st.error("Name, email, and password are required")
+            return
+
+        if signup_password != signup_confirm_password:
+            st.error("Passwords do not match")
+            return
+
+        try:
+            api.register(name=signup_name, email=signup_email, password=signup_password)
+        except APIClientError as exc:
+            st.error(str(exc))
+            return
+
+        st.session_state.is_authenticated = False
+        st.session_state.token = None
+        st.session_state.user_email = None
+        st.session_state.prefill_login_email = signup_email.strip().lower()
+        st.session_state.auth_notice = "Account created successfully. Please sign in."
+        st.session_state.nav_page = "Login"
         st.rerun()
