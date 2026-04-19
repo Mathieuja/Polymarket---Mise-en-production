@@ -46,7 +46,7 @@ class APIClient:
             return {"access_token": "mock-token", "token_type": "bearer", "email": email}
 
         payload = {"name": name, "email": email, "password": password}
-        return self._post_json("/users/register", payload)
+        return self._post_json("/auth/register", payload)
 
     # --- Read models ---
     def get_markets(self) -> list[dict[str, Any]]:
