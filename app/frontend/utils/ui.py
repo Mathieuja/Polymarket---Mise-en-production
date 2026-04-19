@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from app.frontend.utils.api_client import APIClientError
+from utils.api_client import APIClientError
 
 
 def format_currency(value: float) -> str:

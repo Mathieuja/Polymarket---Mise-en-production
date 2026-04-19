@@ -4,8 +4,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from app.frontend.utils.api_client import APIClient, APIClientError
-from app.frontend.utils.ui import (
+from utils.api_client import APIClient, APIClientError
+from utils.ui import (
     format_probability,
     format_quantity,
     render_api_error_state,
