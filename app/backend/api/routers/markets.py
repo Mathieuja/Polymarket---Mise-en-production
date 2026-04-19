@@ -1,91 +1,255 @@
-"""Public market endpoints backed by PostgreSQL."""
+"""Public market endpoints backed by PostgreSQL.
 
-from typing import Any
+Endpoints for:
+- Listing markets with filters
+- Getting market details
+- Price history
+- Open interest
+- Market statistics
+"""
+from typing import Optional
 
-from app_shared.database import Market, get_db
-from app_shared.schemas import MarketSchema, MarketSummarySchema
-from fastapi import APIRouter, Depends, HTTPException, status
+from app_shared.database import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+
+from app.backend.api.schemas.market_responses import (
+    MarketDetailResponse,
+    MarketFilterParams,
+    MarketListResponse,
+    MarketSummary,
+    OpenInterestResponse,
+    PriceHistoryResponse,
+    SyncStatsResponse,
+)
+from app.backend.api.services.market_service import MarketService
 
 router = APIRouter(prefix="/markets", tags=["markets"])
 
 
-def _summary_id(market: Market) -> str:
-    return market.slug or market.external_id
+def get_market_service(db: Session = Depends(get_db)) -> MarketService:
+    """Dependency to get MarketService instance."""
+    return MarketService(db)
 
 
-def _market_summary(market: Market) -> dict[str, Any]:
-    return {
-        "id": _summary_id(market),
-        "title": market.question,
-        "yes_price": market.yes_price,
-        "slug": market.slug,
-        "question": market.question,
-        "closed": market.closed,
-        "active": market.active,
-    }
+# ==================== List & Filter Endpoints ====================
 
 
 @router.get(
     "",
-    status_code=status.HTTP_200_OK,
-    response_model=list[MarketSummarySchema],
-    summary="List markets from PostgreSQL",
+    response_model=MarketListResponse,
+    summary="List markets with filters",
 )
-def list_markets(
-    skip: int = 0,
-    limit: int = 25,
-    db: Session = Depends(get_db),
+async def list_markets(
+    market_service: MarketService = Depends(get_market_service),
+    # Filter parameters
+    search: Optional[str] = Query(None, description="Text search in question/description"),
+    closed: Optional[bool] = Query(None, description="Filter by closed status"),
+    active: Optional[bool] = Query(None, description="Filter by active status"),
+    volume_min: Optional[float] = Query(None, ge=0, description="Minimum total volume"),
+    volume_max: Optional[float] = Query(None, ge=0, description="Maximum total volume"),
+    liquidity_min: Optional[float] = Query(None, ge=0, description="Minimum liquidity"),
+    liquidity_max: Optional[float] = Query(None, ge=0, description="Maximum liquidity"),
+    # Pagination
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Results per page"),
+    # Sorting
+    sort_by: Optional[str] = Query(
+        "volume",
+        description="Field to sort by (volume, liquidity, volume_24h)",
+    ),
+    sort_desc: bool = Query(True, description="Sort descending"),
 ):
-    markets = (
-        db.query(Market)
-        .order_by(Market.last_synced_at.desc(), Market.id.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
+    """
+    List markets from database with filtering and pagination.
+
+    Perfect for market explorer:
+    - Filter by active/closed status
+    - Filter by volume/liquidity ranges
+    - Text search across questions
+    - Paginated results
+    """
+    filters = MarketFilterParams(
+        search=search,
+        closed=closed,
+        active=active,
+        volume_min=volume_min,
+        volume_max=volume_max,
+        liquidity_min=liquidity_min,
+        liquidity_max=liquidity_max,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_desc=sort_desc,
     )
-    return [_market_summary(market) for market in markets]
+
+    return await market_service.list_markets(filters)
 
 
 @router.get(
-    "/latest",
-    status_code=status.HTTP_200_OK,
-    response_model=list[MarketSchema],
-    summary="Get latest synced markets",
+    "/top",
+    response_model=list[MarketSummary],
+    summary="Get top markets",
 )
-def get_latest_markets(
-    limit: int = 1,
-    db: Session = Depends(get_db),
+async def get_top_markets(
+    market_service: MarketService = Depends(get_market_service),
+    limit: int = Query(20, ge=1, le=100, description="Number of markets"),
+    sort_by: str = Query("volume", description="Sort field: volume_24h, volume, liquidity"),
+    active_only: bool = Query(True, description="Only active markets"),
 ):
-    """Return the last synced market row(s), newest first."""
+    """
+    Get top markets by volume or liquidity.
 
-    safe_limit = max(1, min(limit, 100))
-    markets = (
-        db.query(Market)
-        .order_by(Market.last_synced_at.desc(), Market.id.desc())
-        .limit(safe_limit)
-        .all()
+    Quick endpoint for dashboard widgets showing top markets.
+    """
+    return await market_service.get_top_markets(
+        limit=limit,
+        sort_by=sort_by,
+        active_only=active_only,
     )
-    return markets
 
 
 @router.get(
-    "/{market_id}",
-    status_code=status.HTTP_200_OK,
-    response_model=MarketSchema,
-    summary="Get a market by slug or external ID",
+    "/stats",
+    response_model=SyncStatsResponse,
+    summary="Get sync statistics",
 )
-def get_market(market_id: str, db: Session = Depends(get_db)):
-    market = (
-        db.query(Market)
-        .filter((Market.slug == market_id) | (Market.external_id == market_id))
-        .first()
+async def get_sync_stats(
+    market_service: MarketService = Depends(get_market_service),
+):
+    """
+    Get market database sync statistics.
+
+    Shows total markets, active/closed counts, and sync timestamps.
+    """
+    stats = await market_service.get_sync_stats()
+    return stats
+
+
+# ==================== Single Market Endpoints ====================
+
+# NOTE: Price history route MUST come before the slug route
+# because {slug:path} would otherwise capture "slug/prices" as the slug
+
+
+@router.get(
+    "/by-slug/{slug:path}/prices",
+    response_model=PriceHistoryResponse,
+    summary="Get price history by slug",
+)
+async def get_price_history(
+    slug: str,
+    market_service: MarketService = Depends(get_market_service),
+    outcome_index: int = Query(0, ge=0, le=10, description="Outcome index (0=first, 1=second)"),
+    start_ts: Optional[int] = Query(None, description="Start Unix timestamp"),
+    end_ts: Optional[int] = Query(None, description="End Unix timestamp"),
+    force_refresh: bool = Query(False, description="Force fetch from CLOB API"),
+):
+    """
+    Get price history for a market outcome.
+
+    Fetches from CLOB API on demand.
+
+    - **outcome_index**: 0 for first outcome (e.g., "Yes"), 1 for second (e.g., "No")
+    - **start_ts/end_ts**: Unix timestamps for time range filter
+    """
+    prices = await market_service.get_price_history(
+        slug=slug,
+        outcome_index=outcome_index,
+        start_ts=start_ts,
+        end_ts=end_ts,
+        force_refresh=force_refresh,
     )
 
-    if market is None:
+    if not prices:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Market '{market_id}' not found",
+            detail=f"Market '{slug}' not found or no price history available",
+        )
+
+    return prices
+
+
+@router.get(
+    "/by-slug/{slug:path}",
+    response_model=MarketDetailResponse,
+    summary="Get market by slug",
+)
+async def get_market_by_slug(
+    slug: str,
+    market_service: MarketService = Depends(get_market_service),
+    force_refresh: bool = Query(False, description="Force fetch from Polymarket API"),
+):
+    """
+    Get market details by slug.
+
+    Lazy-loads from Polymarket API if not cached.
+    Use `force_refresh=true` to always fetch fresh data.
+    """
+    market = await market_service.get_market_by_slug(slug, force_refresh=force_refresh)
+
+    if not market:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Market with slug '{slug}' not found",
         )
 
     return market
+
+
+@router.get(
+    "/by-condition/{condition_id}",
+    response_model=MarketDetailResponse,
+    summary="Get market by condition ID",
+)
+async def get_market_by_condition_id(
+    condition_id: str,
+    market_service: MarketService = Depends(get_market_service),
+    force_refresh: bool = Query(False, description="Force fetch from Polymarket API"),
+):
+    """
+    Get market details by on-chain condition ID.
+
+    Lazy-loads from Polymarket API if not cached.
+    """
+    market = await market_service.get_market_by_condition_id(
+        condition_id, force_refresh=force_refresh
+    )
+
+    if not market:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Market with condition ID '{condition_id}' not found",
+        )
+
+    return market
+
+
+# ==================== Open Interest Endpoints ====================
+
+
+@router.post(
+    "/open-interest",
+    response_model=list[OpenInterestResponse],
+    summary="Get open interest for markets",
+)
+async def get_open_interest(
+    slugs: list[str],
+    market_service: MarketService = Depends(get_market_service),
+    force_refresh: bool = Query(False, description="Force fetch from Data API"),
+):
+    """
+    Get open interest for multiple markets.
+
+    POST with list of slugs in request body.
+    """
+    if not slugs:
+        return []
+
+    if len(slugs) > 50:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum 50 slugs per request",
+        )
+
+    return await market_service.get_open_interest(slugs, force_refresh=force_refresh)

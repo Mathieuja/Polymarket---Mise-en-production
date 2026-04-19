@@ -50,7 +50,9 @@ class S3RawClient:
         """Store a JSONL batch in S3 and return the object key."""
 
         key = self._normalized_key(key_suffix)
-        payload = "\n".join(json.dumps(row, ensure_ascii=False) for row in rows)
+        payload = "\n".join(
+            json.dumps(row, ensure_ascii=False, default=str) for row in rows
+        )
 
         await asyncio.to_thread(
             self._client.put_object,

@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.backend.api.routers import (
     auth_router,
-    database_router,
+    debug_router,
     health_router,
     markets_router,
 )
@@ -51,5 +51,5 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(auth_router)
-app.include_router(database_router)
+app.include_router(debug_router)
 app.include_router(markets_router)
