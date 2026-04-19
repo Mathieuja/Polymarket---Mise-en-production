@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import streamlit as st
-
-from app.frontend.utils.api_client import APIClient
-from app.frontend.utils.session import logout
-from app.frontend.utils.ui import (
+from utils.api_client import APIClient
+from utils.session import logout
+from utils.ui import (
     badge_html,
     render_info_card,
     render_label_value_pairs,

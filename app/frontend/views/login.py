@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import streamlit as st
-
-from app.frontend.utils.api_client import APIClient, APIClientError
-from app.frontend.utils.ui import render_page_header
+from utils.api_client import APIClient, APIClientError
+from utils.ui import render_page_header
 
 
 def render(api: APIClient) -> None:

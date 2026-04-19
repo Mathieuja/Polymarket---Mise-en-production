@@ -3,14 +3,13 @@ from __future__ import annotations
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-
-from app.frontend.utils.api_client import APIClient, APIClientError
-from app.frontend.utils.portfolio_math import (
+from utils.api_client import APIClient, APIClientError
+from utils.portfolio_math import (
     compute_portfolio_metrics,
     compute_positions,
     market_outcome_price_usd,
 )
-from app.frontend.utils.ui import (
+from utils.ui import (
     dataframe_with_default_style,
     format_currency,
     format_probability,
