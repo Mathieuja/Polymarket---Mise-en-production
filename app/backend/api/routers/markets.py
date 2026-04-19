@@ -7,12 +7,11 @@ Endpoints for:
 - Open interest
 - Market statistics
 """
-from typing import Annotated, Optional
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from typing import Optional
 
 from app_shared.database import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
 
 from app.backend.api.schemas.market_responses import (
     MarketDetailResponse,
@@ -55,7 +54,10 @@ async def list_markets(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Results per page"),
     # Sorting
-    sort_by: Optional[str] = Query("volume", description="Field to sort by (volume, liquidity, volume_24h)"),
+    sort_by: Optional[str] = Query(
+        "volume",
+        description="Field to sort by (volume, liquidity, volume_24h)",
+    ),
     sort_desc: bool = Query(True, description="Sort descending"),
 ):
     """

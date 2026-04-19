@@ -12,7 +12,6 @@ from typing import Any, Optional
 
 import httpx
 
-
 # API Base URLs
 GAMMA_BASE = "https://gamma-api.polymarket.com"
 CLOB_BASE = "https://clob.polymarket.com"

@@ -10,10 +10,9 @@ Provides:
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import and_, func, or_
-from sqlalchemy.orm import Session
-
 from app_shared.database import Market
+from sqlalchemy import func, or_
+from sqlalchemy.orm import Session
 
 from app.backend.api.schemas.market_responses import (
     MarketDetailResponse,
@@ -204,7 +203,10 @@ class MarketService:
         query = self.db.query(Market)
 
         if active_only:
-            query = query.filter(and_(Market.closed == False, Market.active == True))
+            query = query.filter(
+                Market.closed.is_(False),
+                Market.active.is_(True),
+            )
 
         # Map friendly names to DB fields
         sort_field_map = {
@@ -258,7 +260,7 @@ class MarketService:
             market_data = await api.get_market_by_slug(slug)
             if not market_data:
                 return None
-            await self._cache_market(market_data)
+            self._cache_market(market_data)
             market = self.db.query(Market).filter(Market.slug == slug).first()
             if not market:
                 return None
@@ -268,7 +270,11 @@ class MarketService:
 
         # If no token IDs available, return empty history
         if not clob_token_ids or outcome_index >= len(clob_token_ids):
-            outcome_name = outcomes[outcome_index] if outcome_index < len(outcomes) else f"Outcome {outcome_index}"
+            outcome_name = (
+                outcomes[outcome_index]
+                if outcome_index < len(outcomes)
+                else f"Outcome {outcome_index}"
+            )
             return PriceHistoryResponse(
                 slug=slug,
                 outcome=outcome_name,
@@ -280,7 +286,11 @@ class MarketService:
             )
 
         token_id = clob_token_ids[outcome_index]
-        outcome_name = outcomes[outcome_index] if outcome_index < len(outcomes) else f"Outcome {outcome_index}"
+        outcome_name = (
+            outcomes[outcome_index]
+            if outcome_index < len(outcomes)
+            else f"Outcome {outcome_index}"
+        )
 
         # Fetch from CLOB API
         api = await get_polymarket_api()
@@ -394,10 +404,11 @@ class MarketService:
         """Get market database sync statistics."""
         total = self.db.query(func.count(Market.id)).scalar() or 0
         active = self.db.query(func.count(Market.id)).filter(
-            and_(Market.closed == False, Market.active == True)
+            Market.closed.is_(False),
+            Market.active.is_(True),
         ).scalar() or 0
         closed = self.db.query(func.count(Market.id)).filter(
-            Market.closed == True
+            Market.closed.is_(True)
         ).scalar() or 0
 
         # Get oldest and newest sync times
@@ -468,9 +479,21 @@ class MarketService:
             market.volume_24hr = float(market_data.get("volume24hr", 0) or 0)
             market.volume_7d = float(market_data.get("volume7d", 0) or 0)
             market.liquidity_num = float(market_data.get("liquidityNum", 0) or 0)
-            market.best_bid = float(market_data["bestBid"]) if market_data.get("bestBid") is not None else None
-            market.best_ask = float(market_data["bestAsk"]) if market_data.get("bestAsk") is not None else None
-            market.spread = float(market_data["spread"]) if market_data.get("spread") is not None else None
+            market.best_bid = (
+                float(market_data["bestBid"])
+                if market_data.get("bestBid") is not None
+                else None
+            )
+            market.best_ask = (
+                float(market_data["bestAsk"])
+                if market_data.get("bestAsk") is not None
+                else None
+            )
+            market.spread = (
+                float(market_data["spread"])
+                if market_data.get("spread") is not None
+                else None
+            )
             market.active = market_data.get("active", True)
             market.closed = market_data.get("closed", False)
             market.image = market_data.get("image")
@@ -494,9 +517,21 @@ class MarketService:
                 volume_24hr=float(market_data.get("volume24hr", 0) or 0),
                 volume_7d=float(market_data.get("volume7d", 0) or 0),
                 liquidity_num=float(market_data.get("liquidityNum", 0) or 0),
-                best_bid=float(market_data["bestBid"]) if market_data.get("bestBid") is not None else None,
-                best_ask=float(market_data["bestAsk"]) if market_data.get("bestAsk") is not None else None,
-                spread=float(market_data["spread"]) if market_data.get("spread") is not None else None,
+                best_bid=(
+                    float(market_data["bestBid"])
+                    if market_data.get("bestBid") is not None
+                    else None
+                ),
+                best_ask=(
+                    float(market_data["bestAsk"])
+                    if market_data.get("bestAsk") is not None
+                    else None
+                ),
+                spread=(
+                    float(market_data["spread"])
+                    if market_data.get("spread") is not None
+                    else None
+                ),
                 active=market_data.get("active", True),
                 closed=market_data.get("closed", False),
                 image=market_data.get("image"),

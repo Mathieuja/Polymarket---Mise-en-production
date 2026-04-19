@@ -8,7 +8,6 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-
 # ==================== Market Metadata Responses ====================
 
 class MarketSummary(BaseModel):
