@@ -9,7 +9,8 @@ from typing import Any
 from uuid import uuid4
 
 import requests
-from utils.portfolio_math import can_sell
+from .portfolio_math import can_sell
+from .session import get_session_state
 
 
 class APIClientError(RuntimeError):
