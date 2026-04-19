@@ -39,6 +39,15 @@ class APIClient:
         payload = {"email": email, "password": password}
         return self._post_json("/auth/login", payload)
 
+    def register(self, name: str, email: str, password: str) -> dict[str, Any]:
+        if self.backend_mode == "mock":
+            if not name.strip() or not email.strip() or not password:
+                raise APIClientError("Name/email/password required")
+            return {"access_token": "mock-token", "token_type": "bearer", "email": email}
+
+        payload = {"name": name, "email": email, "password": password}
+        return self._post_json("/users/register", payload)
+
     # --- Read models ---
     def get_markets(self) -> list[dict[str, Any]]:
         if self.backend_mode == "mock":
@@ -185,6 +194,19 @@ class APIClient:
             )
             resp.raise_for_status()
             return resp.json()
+        except requests.HTTPError as exc:
+            detail = None
+            if exc.response is not None:
+                try:
+                    data = exc.response.json()
+                    if isinstance(data, dict):
+                        detail = data.get("detail")
+                except ValueError:
+                    detail = None
+
+            if detail:
+                raise APIClientError(str(detail)) from exc
+            raise APIClientError(f"POST {path} failed: {exc}") from exc
         except requests.RequestException as exc:
             raise APIClientError(f"POST {path} failed: {exc}") from exc
         except ValueError as exc:

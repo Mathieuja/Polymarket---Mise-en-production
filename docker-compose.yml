@@ -66,6 +66,7 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      JWT_SECRET: ${JWT_SECRET:-change-me}
     ports:
       # Map backend API port to host
       - "8000:8000"
@@ -175,6 +176,7 @@ services:
       API_URL: http://backend:8000
       # Streamlit configuration
       STREAMLIT_ENV: ${STREAMLIT_ENV:-development}
+      BACKEND_MODE: ${BACKEND_MODE:-mock}
     ports:
       # Map Streamlit port to host
       - "8501:8501"
