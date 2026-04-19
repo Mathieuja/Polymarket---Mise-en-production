@@ -8,7 +8,7 @@ from app.backend.api.core.security import create_access_token, get_password_hash
 from app.backend.api.routers.auth import LoginResponse
 from app.backend.api.schemas.user import UserRegisterRequest
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post(
