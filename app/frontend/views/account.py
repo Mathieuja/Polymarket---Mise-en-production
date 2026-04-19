@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import streamlit as st
-
 from utils.api_client import APIClient
 from utils.session import logout
 from utils.ui import (

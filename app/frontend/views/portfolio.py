@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pandas as pd
 import streamlit as st
-
 from utils.api_client import APIClient, APIClientError
 from utils.portfolio_math import compute_portfolio_metrics
 from utils.ui import (
