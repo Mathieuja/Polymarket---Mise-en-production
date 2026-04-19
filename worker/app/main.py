@@ -10,9 +10,11 @@ if __package__ in {None, ""}:
     from pathlib import Path
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from services.live_data_worker import main as run_live_data_worker
     from services.raw_ingestion_worker import main as run_raw_worker
     from services.transform_loader_worker import main as run_transform_worker
 else:
+    from .services.live_data_worker import main as run_live_data_worker
     from .services.raw_ingestion_worker import main as run_raw_worker
     from .services.transform_loader_worker import main as run_transform_worker
 
@@ -21,6 +23,8 @@ def _resolve_worker_main():
     mode = os.getenv("WORKER_MODE", "raw").strip().lower()
     if mode == "transform":
         return run_transform_worker
+    if mode in {"live", "live_data", "live-data"}:
+        return run_live_data_worker
     return run_raw_worker
 
 

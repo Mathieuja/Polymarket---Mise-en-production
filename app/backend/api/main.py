@@ -12,6 +12,7 @@ from app.backend.api.routers import (
     auth_router,
     debug_router,
     health_router,
+    market_stream_router,
     markets_router,
 )
 
@@ -53,3 +54,4 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(debug_router)
 app.include_router(markets_router)
+app.include_router(market_stream_router)

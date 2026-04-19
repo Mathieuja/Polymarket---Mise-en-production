@@ -9,6 +9,13 @@ from app.backend.api.schemas.market_responses import (
     PriceHistoryResponse,
     SyncStatsResponse,
 )
+from app.backend.api.schemas.market_stream import (
+    LatestMessageResponse,
+    OrderbookResponse,
+    StreamStartResponse,
+    StreamStopResponse,
+    TokenOrderbook,
+)
 
 __all__ = [
     "MarketSummary",
@@ -18,4 +25,9 @@ __all__ = [
     "PriceHistoryResponse",
     "OpenInterestResponse",
     "SyncStatsResponse",
+    "StreamStartResponse",
+    "StreamStopResponse",
+    "TokenOrderbook",
+    "OrderbookResponse",
+    "LatestMessageResponse",
 ]
