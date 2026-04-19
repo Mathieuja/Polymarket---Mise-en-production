@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import os
 
-from app.backend.api.core.security import create_access_token, verify_password
 from app_shared.database import User, get_db
-from fastapi import APIRouter, HTTPException, status
-from sqlalchemy.orm import Session
-from fastapi import Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from app.backend.api.core.security import create_access_token, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -52,7 +52,10 @@ async def login(body: LoginRequest, db: Session = Depends(get_db)) -> LoginRespo
     demo_password = os.getenv("DEMO_PASSWORD", "")
     if backend_mode != "api" and demo_email and demo_password:
         if email != demo_email or password != demo_password:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials",
+            )
 
         token = create_access_token({"sub": email})
         return LoginResponse(access_token=token, email=email)

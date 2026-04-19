@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from app.backend.api.core.security import create_access_token, get_password_hash
-from app.backend.api.routers.auth import LoginResponse
-from app.backend.api.schemas.user import UserRegisterRequest
 from app_shared.database import User, get_db
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
+from app.backend.api.core.security import create_access_token, get_password_hash
+from app.backend.api.routers.auth import LoginResponse
+from app.backend.api.schemas.user import UserRegisterRequest
 
 router = APIRouter(prefix="/users", tags=["users"])
 

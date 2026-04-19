@@ -5,7 +5,12 @@ from .market_stream import router as market_stream_router
 from .markets import router as markets_router
 from .users import router as users_router
 
-
-
-__all__ = ["auth_router", "health_router", "debug_router", "markets_router", "users_router", "market_stream_router"]
+__all__ = [
+	"auth_router",
+	"health_router",
+	"debug_router",
+	"markets_router",
+	"users_router",
+	"market_stream_router",
+]
 
