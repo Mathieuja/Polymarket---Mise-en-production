@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 
 from app_shared.database import User, get_db
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -31,9 +31,6 @@ class ChangePasswordRequest(BaseModel):
     new_password_confirm: str
 
 
-AUTH_COOKIE_NAME = "access_token"
-
-
 def _require_env(name: str) -> str:
     value = os.getenv(name, "").strip()
     if not value:
@@ -44,18 +41,6 @@ def _require_env(name: str) -> str:
     return value
 
 
-def _set_auth_cookie(response: Response, token: str) -> None:
-    secure_cookie = os.getenv("AUTH_COOKIE_SECURE", "false").strip().lower() in {"1", "true", "yes"}
-    response.set_cookie(
-        key=AUTH_COOKIE_NAME,
-        value=token,
-        httponly=True,
-        samesite="lax",
-        secure=secure_cookie,
-        path="/",
-    )
-
-
 @router.post(
     "/login",
     summary="Login user",
@@ -63,7 +48,6 @@ def _set_auth_cookie(response: Response, token: str) -> None:
 )
 async def login(
     body: LoginRequest,
-    response: Response,
     db: Session = Depends(get_db),
 ) -> LoginResponse:
     _require_env("JWT_SECRET")
@@ -85,7 +69,6 @@ async def login(
             )
 
         token = create_access_token({"sub": email})
-        _set_auth_cookie(response=response, token=token)
         return LoginResponse(access_token=token, email=email)
 
     user = db.query(User).filter(User.email == email).first()
@@ -96,7 +79,6 @@ async def login(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     token = create_access_token({"sub": email})
-    _set_auth_cookie(response=response, token=token)
     return LoginResponse(access_token=token, email=email)
 
 

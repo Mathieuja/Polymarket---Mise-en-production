@@ -591,7 +591,7 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
 
     history_df = None
     try:
-        history = api.get_price_history(str(market["slug"]), outcome_index=0)
+        history = api.get_price_history(str(market["slug"]), outcome_index=0, token=token)
         prices = history.get("points") if isinstance(history, dict) else history
         if isinstance(prices, list) and prices:
             history_df = pd.DataFrame(prices)

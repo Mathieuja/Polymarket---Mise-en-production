@@ -26,10 +26,7 @@ class APIClient:
     timeout_s: float = 10.0
 
     def _headers(self, token: str | None = None) -> dict[str, str]:
-        headers: dict[str, str] = {"Accept": "application/json"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        return headers
+        return {"Accept": "application/json"}
 
     # -------------------------
     # HTTP helpers
@@ -47,6 +44,9 @@ class APIClient:
     ) -> Any:
         url = f"{self.api_url}{path}"
         headers = self._headers(token)
+        request_params = dict(params or {})
+        if token:
+            request_params["token"] = token
         if payload is not None:
             headers = {**headers, "Content-Type": "application/json"}
 
@@ -55,7 +55,7 @@ class APIClient:
                 method=method,
                 url=url,
                 headers=headers,
-                params=params,
+                params=request_params,
                 json=payload,
                 timeout=self.timeout_s,
             )
