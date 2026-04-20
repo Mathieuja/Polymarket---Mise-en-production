@@ -18,7 +18,10 @@ sys.path.insert(0, str(shared_path))
 
 
 @pytest.fixture(autouse=True)
-def mock_database_initialization(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:
+def mock_database_initialization(
+    monkeypatch: pytest.MonkeyPatch,
+    request: pytest.FixtureRequest,
+) -> None:
     """
     Mock database initialization to prevent connection attempts during tests.
 
