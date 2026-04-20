@@ -16,13 +16,7 @@ from botocore.config import Config
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.backend.api.dependencies.auth import verify_token
-
-router = APIRouter(
-    prefix="/debug",
-    tags=["debug"],
-    dependencies=[Depends(verify_token)],
-)
+router = APIRouter(prefix="/debug", tags=["debug"])
 
 
 def _resolve_s3_endpoint() -> str | None:
@@ -68,9 +62,7 @@ def _read_jsonl_rows(bucket: str, key: str, limit: int) -> list[dict]:
     status_code=status.HTTP_200_OK,
     summary="Test database connection",
 )
-def health(
-    db: Session = Depends(get_db),
-):
+def health(db: Session = Depends(get_db)):
     """
     Test the database connection and return pipeline stats.
 
@@ -98,9 +90,7 @@ def health(
     status_code=status.HTTP_200_OK,
     summary="Get latest auto-increment IDs",
 )
-def latest_increment(
-    db: Session = Depends(get_db),
-):
+def latest_increment(db: Session = Depends(get_db)):
     """
     Return the latest auto-increment IDs for key pipeline tables.
 
@@ -128,9 +118,7 @@ def latest_increment(
     status_code=status.HTTP_200_OK,
     summary="Get latest full batch",
 )
-def latest_full_batch(
-    db: Session = Depends(get_db),
-):
+def latest_full_batch(db: Session = Depends(get_db)):
     """
     Return the latest ingestion batch with sync_type='full'.
 
@@ -178,11 +166,7 @@ def latest_full_batch(
     status_code=status.HTTP_200_OK,
     summary="Read latest raw markets from S3",
 )
-def latest_raw_markets(
-    sync_type: str,
-    limit: int = 1,
-    db: Session = Depends(get_db),
-):
+def latest_raw_markets(sync_type: str, limit: int = 1, db: Session = Depends(get_db)):
     """
     Return latest raw market payload rows from the latest S3 batch.
 
@@ -249,10 +233,7 @@ def latest_raw_markets(
     status_code=status.HTTP_200_OK,
     summary="Get latest raw full batch",
 )
-def latest_raw_full_markets(
-    limit: int = 1,
-    db: Session = Depends(get_db),
-):
+def latest_raw_full_markets(limit: int = 1, db: Session = Depends(get_db)):
     """Shortcut endpoint for latest raw full batch."""
     return latest_raw_markets(sync_type="full", limit=limit, db=db)
 
@@ -262,9 +243,6 @@ def latest_raw_full_markets(
     status_code=status.HTTP_200_OK,
     summary="Get latest raw incremental batch",
 )
-def latest_raw_incremental_markets(
-    limit: int = 1,
-    db: Session = Depends(get_db),
-):
+def latest_raw_incremental_markets(limit: int = 1, db: Session = Depends(get_db)):
     """Shortcut endpoint for latest raw incremental batch."""
     return latest_raw_markets(sync_type="incremental", limit=limit, db=db)

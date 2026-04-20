@@ -14,9 +14,7 @@ from app.backend.api.routers import (
     health_router,
     market_stream_router,
     markets_router,
-    portfolios_router,
     users_router,
-    ws_router,
 )
 
 
@@ -59,13 +57,3 @@ app.include_router(debug_router)
 app.include_router(users_router)
 app.include_router(markets_router)
 app.include_router(market_stream_router)
-app.include_router(portfolios_router)
-app.include_router(ws_router)
-
-
-@app.get("/", summary="API root")
-async def root() -> dict[str, str]:
-    return {
-        "service": "polyapi",
-        "status": "running",
-    }

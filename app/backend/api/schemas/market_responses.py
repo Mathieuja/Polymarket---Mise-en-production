@@ -1,5 +1,7 @@
 """
 Market response schemas for API endpoints.
+
+These schemas match the format of app_old for backward compatibility.
 """
 from datetime import datetime
 from typing import Optional
@@ -136,6 +138,6 @@ class SyncStatsResponse(BaseModel):
     newest_sync: Optional[datetime] = Field(None, description="Most recent sync timestamp")
 
 
-# ==================== Aliases ====================
+# ==================== Legacy compatibility ====================
 
 MarketResponse = MarketDetailResponse
