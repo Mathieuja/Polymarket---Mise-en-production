@@ -166,8 +166,9 @@ AWS_REGION=eu-west-3
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 
-# Optional local S3-compatible endpoint (MinIO, etc.)
 AWS_ENDPOINT=minio.lab.sspcloud.fr
+
+
 # S3_ENDPOINT_URL=http://minio:9000
 
 #necessary polymarket clob api key
