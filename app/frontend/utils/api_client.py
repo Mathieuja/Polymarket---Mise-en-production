@@ -338,15 +338,10 @@ class APIClient:
         if self.backend_mode == "mock":
             return list(_mock_portfolios())
 
-        try:
-            data = self._get_json("/portfolios", token=token)
-            if isinstance(data, list):
-                return data
-            raise APIClientError("Unexpected /portfolios response")
-        except APIClientError as exc:
-            if "Endpoint not available" in str(exc):
-                return list(_mock_portfolios())
-            raise
+        data = self._get_json("/portfolios", token=token)
+        if isinstance(data, list):
+            return data
+        raise APIClientError("Unexpected /portfolios response")
 
     def get_portfolios(self, token: str | None = None) -> list[dict[str, Any]]:
         return self.list_portfolios(token=token)
@@ -361,23 +356,13 @@ class APIClient:
             return _create_mock_portfolio(name, initial_cash_usd)
 
         payload = {"name": name, "initial_balance": float(initial_cash_usd)}
-        try:
-            return self._post_json("/portfolios", payload, token=token)
-        except APIClientError as exc:
-            if "Endpoint not available" in str(exc):
-                return _create_mock_portfolio(name, initial_cash_usd)
-            raise
+        return self._post_json("/portfolios", payload, token=token)
 
     def get_portfolio(self, portfolio_id: str, token: str | None = None) -> dict[str, Any]:
         if self.backend_mode == "mock":
             return _get_mock_portfolio(portfolio_id)
 
-        try:
-            return self._get_json(f"/portfolios/{portfolio_id}", token=token)
-        except APIClientError as exc:
-            if "Endpoint not available" in str(exc):
-                return _get_mock_portfolio(portfolio_id)
-            raise
+        return self._get_json(f"/portfolios/{portfolio_id}", token=token)
 
     def get_trades(
         self,
@@ -405,37 +390,25 @@ class APIClient:
                 )
             return trades
 
-        try:
-            data = self._get_json(
-                f"/portfolios/{portfolio_id}/trades",
-                token=token,
-                params={"page": page, "page_size": page_size},
-            )
-            if isinstance(data, dict):
-                items = data.get("trades")
-                if isinstance(items, list):
-                    return items
-            if isinstance(data, list):
-                return data
-            raise APIClientError("Unexpected trades response")
-        except APIClientError as exc:
-            if "Endpoint not available" in str(exc):
-                trades = list(_mock_trades())
-                return [t for t in trades if str(t.get("portfolio_id")) == str(portfolio_id)]
-            raise
+        data = self._get_json(
+            f"/portfolios/{portfolio_id}/trades",
+            token=token,
+            params={"page": page, "page_size": page_size},
+        )
+        if isinstance(data, dict):
+            items = data.get("trades")
+            if isinstance(items, list):
+                return items
+        if isinstance(data, list):
+            return data
+        raise APIClientError("Unexpected trades response")
 
     def delete_portfolio(self, portfolio_id: str, token: str | None = None) -> None:
         if self.backend_mode == "mock":
             _delete_mock_portfolio(portfolio_id)
             return
 
-        try:
-            self._delete(f"/portfolios/{portfolio_id}", token=token)
-        except APIClientError as exc:
-            if "Endpoint not available" in str(exc):
-                _delete_mock_portfolio(portfolio_id)
-                return
-            raise
+        self._delete(f"/portfolios/{portfolio_id}", token=token)
 
     def create_trade(
         self,
@@ -473,20 +446,7 @@ class APIClient:
         if notes:
             payload["notes"] = notes
 
-        try:
-            return self._post_json(f"/portfolios/{portfolio_id}/trades", payload, token=token)
-        except APIClientError as exc:
-            if "Endpoint not available" in str(exc):
-                return _create_mock_trade(
-                    portfolio_id=portfolio_id,
-                    market_id=market_id,
-                    outcome=outcome,
-                    side=side,
-                    quantity=qty,
-                    price=price,
-                    notes=notes,
-                )
-            raise
+        return self._post_json(f"/portfolios/{portfolio_id}/trades", payload, token=token)
 
     def get_portfolio_metrics(self, portfolio_id: str, token: str | None = None) -> dict[str, Any]:
         if self.backend_mode == "mock":
