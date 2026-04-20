@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
+
+pytest.importorskip("jose")
+pytest.importorskip("passlib")
+pytest.importorskip("boto3")
+pytest.importorskip("redis")
 
 from app.backend.api.main import app
 
