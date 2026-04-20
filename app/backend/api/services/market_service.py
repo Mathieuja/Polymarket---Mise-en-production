@@ -398,6 +398,22 @@ class MarketService:
 
         return results
 
+    async def bulk_upsert_markets(self, markets: list[dict[str, Any]]) -> int:
+        """Upsert a list of market payloads and return processed count."""
+
+        if not markets:
+            return 0
+
+        processed = 0
+        for item in markets:
+            try:
+                self._cache_market(item)
+                processed += 1
+            except Exception:
+                continue
+
+        return processed
+
     # ==================== Statistics ====================
 
     async def get_sync_stats(self) -> SyncStatsResponse:

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.backend.api.dependencies.auth import verify_token
 from app.backend.api.schemas.market_stream import (
     LatestMessageResponse,
     OrderbookResponse,
@@ -12,7 +13,11 @@ from app.backend.api.schemas.market_stream import (
 )
 from app.backend.api.services.market_stream_service import MarketStreamService
 
-router = APIRouter(prefix="/market-stream", tags=["Market Stream"])
+router = APIRouter(
+    prefix="/market-stream",
+    tags=["Market Stream"],
+    dependencies=[Depends(verify_token)],
+)
 
 
 @router.post(
@@ -20,7 +25,9 @@ router = APIRouter(prefix="/market-stream", tags=["Market Stream"])
     summary="Start live data stream",
     response_model=StreamStartResponse,
 )
-async def start_stream(asset_id: str) -> StreamStartResponse:
+async def start_stream(
+    asset_id: str,
+) -> StreamStartResponse:
     """Start streaming live data for one or more comma-separated assets."""
 
     try:
@@ -52,7 +59,8 @@ async def start_stream(asset_id: str) -> StreamStartResponse:
     summary="Stop live data stream",
     response_model=StreamStopResponse,
 )
-async def stop_stream() -> StreamStopResponse:
+async def stop_stream(
+) -> StreamStopResponse:
     """Stop live data streaming and clear live worker cache."""
 
     try:
@@ -74,7 +82,8 @@ async def stop_stream() -> StreamStopResponse:
     summary="Get all streamed messages",
     response_model=OrderbookResponse,
 )
-async def get_messages() -> OrderbookResponse:
+async def get_messages(
+) -> OrderbookResponse:
     """Return current orderbook snapshot from Redis JSON."""
 
     try:
@@ -96,7 +105,8 @@ async def get_messages() -> OrderbookResponse:
     summary="Get latest streamed message",
     response_model=LatestMessageResponse,
 )
-async def get_latest_message() -> LatestMessageResponse:
+async def get_latest_message(
+) -> LatestMessageResponse:
     """Return latest entry from Redis stream."""
 
     try:
