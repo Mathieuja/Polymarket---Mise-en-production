@@ -11,11 +11,20 @@ def init_session_state() -> None:
         "is_authenticated": False,
         "token": None,
         "user_email": None,
+        "user": None,
         "nav_page": "Login",
+        "nav_override": None,
+        "nav_key": 0,
         "selected_market_id": None,
         "selected_portfolio_id": None,
+        "metrics_portfolio_id": None,
+        "trading_view": "list",
+        "trading_page": 1,
         "mock_portfolios": None,
         "mock_trades": None,
+        "orderbook": None,
+        "market_stream_started": False,
+        "active_market_slug": None,
     }
 
     for key, value in defaults.items():

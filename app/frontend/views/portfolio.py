@@ -32,7 +32,7 @@ def render(api: APIClient) -> None:
     token = st.session_state.get("token")
     try:
         markets = api.get_markets()
-        portfolios = api.get_portfolios(token=token)
+        portfolios = api.list_portfolios(token=token)
     except APIClientError as exc:
         render_api_error_state(exc, resource="portfolio data")
         return
@@ -45,13 +45,13 @@ def render(api: APIClient) -> None:
                 "and history views across the app."
             ),
         )
-        by_id = {p.get("id"): p for p in portfolios}
+        by_id = {str(p.get("id") or p.get("_id")): p for p in portfolios}
 
         def _format_portfolio_id(pid: str) -> str:
             p = by_id.get(pid, {})
             return f"{p.get('name')} ({pid})"
 
-        ids = [p.get("id") for p in portfolios]
+        ids = [str(p.get("id") or p.get("_id")) for p in portfolios]
         current = st.session_state.get("selected_portfolio_id")
         if current not in ids:
             current = ids[0]
@@ -66,13 +66,38 @@ def render(api: APIClient) -> None:
 
         portfolio = by_id[selected]
         try:
-            trades = [t for t in api.get_trades(token=token) if t.get("portfolio_id") == selected]
+            trades = api.get_trades(token=token, portfolio_id=selected, page=1, page_size=200)
         except APIClientError as exc:
             render_api_error_state(exc, resource="trade history")
             return
+
+        # Normalize mock/backend portfolio shape.
+        if "cash_usd" not in portfolio:
+            portfolio["cash_usd"] = float(
+                portfolio.get("cash_balance", portfolio.get("initial_balance", 0.0))
+            )
+        if "initial_cash_usd" not in portfolio:
+            portfolio["initial_cash_usd"] = float(
+                portfolio.get("initial_balance", portfolio.get("cash_usd", 0.0))
+            )
+
+        normalized_trades: list[dict] = []
+        for trade in trades:
+            normalized_trades.append(
+                {
+                    "portfolio_id": str(trade.get("portfolio_id")),
+                    "market_id": str(trade.get("market_id")),
+                    "outcome": str(trade.get("outcome", "YES")).upper(),
+                    "action": str(trade.get("side", trade.get("action", "BUY"))).upper(),
+                    "qty": float(trade.get("quantity", trade.get("qty", 0.0))),
+                    "price": float(trade.get("price", 0.0)),
+                    "ts": trade.get("created_at", trade.get("ts")),
+                }
+            )
+
         metrics = compute_portfolio_metrics(
             portfolio=portfolio,
-            trades=trades,
+            trades=normalized_trades,
             markets=markets,
         )
 
@@ -89,6 +114,115 @@ def render(api: APIClient) -> None:
                 },
             ]
         )
+
+        st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+        col_metrics, col_trade, col_delete = st.columns([1, 1, 1])
+        with col_metrics:
+            if st.button("View metrics", key=f"pf_metrics_{selected}", use_container_width=True):
+                st.session_state.metrics_portfolio_id = selected
+                st.session_state.nav_override = "Metrics"
+                st.rerun()
+        with col_trade:
+            if st.button("Open trading", key=f"pf_trade_{selected}", use_container_width=True):
+                st.session_state.selected_portfolio_id = selected
+                st.session_state.nav_override = "Trading"
+                st.rerun()
+        with col_delete:
+            if st.button("Delete portfolio", key=f"pf_delete_{selected}", use_container_width=True):
+                try:
+                    api.delete_portfolio(selected, token=token)
+                except APIClientError as exc:
+                    st.error(str(exc))
+                else:
+                    st.success("Portfolio deleted")
+                    st.session_state.selected_portfolio_id = None
+                    st.rerun()
+
+        position_rows: list[dict] = []
+        for trade in normalized_trades:
+            market_id = trade["market_id"]
+            outcome = trade["outcome"]
+            key = (market_id, outcome)
+            existing = next((r for r in position_rows if r["key"] == key), None)
+            signed_qty = trade["qty"] if trade["action"] == "BUY" else -trade["qty"]
+            if existing is None:
+                position_rows.append(
+                    {
+                        "key": key,
+                        "market_id": market_id,
+                        "outcome": outcome,
+                        "qty": signed_qty,
+                        "cost": trade["qty"] * trade["price"] if trade["action"] == "BUY" else 0.0,
+                    }
+                )
+            else:
+                if trade["action"] == "BUY":
+                    existing["cost"] += trade["qty"] * trade["price"]
+                existing["qty"] += signed_qty
+
+        display_positions: list[dict] = []
+        markets_by_slug = {str(m.get("slug") or m.get("id")): m for m in markets}
+        for row in position_rows:
+            if row["qty"] <= 0:
+                continue
+            market = markets_by_slug.get(str(row["market_id"]))
+            question = (
+                (market or {}).get("question")
+                or (market or {}).get("title")
+                or row["market_id"]
+            )
+            outcomes = (market or {}).get("outcomes") or []
+            prices = (market or {}).get("outcome_prices") or []
+            current_price = None
+            for index, outcome in enumerate(outcomes):
+                if str(outcome).upper() == row["outcome"] and index < len(prices):
+                    try:
+                        current_price = float(prices[index])
+                    except Exception:
+                        current_price = None
+                    break
+            avg_cost = (row["cost"] / row["qty"]) if row["qty"] > 0 else 0.0
+            if current_price is None:
+                current_price = avg_cost
+            current_value = row["qty"] * current_price
+            pnl = current_value - row["cost"]
+            pnl_pct = (pnl / row["cost"] * 100.0) if row["cost"] > 0 else 0.0
+            display_positions.append(
+                {
+                    "Market": question,
+                    "Outcome": row["outcome"],
+                    "Qty": row["qty"],
+                    "Avg entry": avg_cost,
+                    "Current": current_price,
+                    "Value": current_value,
+                    "PnL": pnl,
+                    "PnL %": pnl_pct,
+                }
+            )
+
+        st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+        render_section_header(
+            "Positions",
+            "Detailed open positions for the selected portfolio.",
+        )
+        if display_positions:
+            df_positions = pd.DataFrame(display_positions)
+            df_positions["Qty"] = df_positions["Qty"].map(lambda value: f"{float(value):.2f}")
+            df_positions["Avg entry"] = df_positions["Avg entry"].map(format_currency)
+            df_positions["Current"] = df_positions["Current"].map(format_currency)
+            df_positions["Value"] = df_positions["Value"].map(format_currency)
+            df_positions["PnL"] = df_positions["PnL"].map(format_signed_currency)
+            df_positions["PnL %"] = df_positions["PnL %"].map(lambda value: f"{value:+.1f}%")
+            st.dataframe(
+                dataframe_with_default_style(df_positions),
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            render_empty_state(
+                "No open positions.",
+                "Submit a trade in the Trading view to populate this section.",
+            )
     else:
         render_empty_state(
             "No portfolio has been created yet.",

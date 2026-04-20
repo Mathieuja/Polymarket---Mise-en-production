@@ -23,9 +23,9 @@ def compute_positions(trades: Iterable[dict[str, Any]]) -> dict[tuple[str, str, 
     for t in trades:
         portfolio_id = str(t["portfolio_id"])
         market_id = str(t["market_id"])
-        outcome = str(t.get("outcome") or t.get("side") or "YES").upper()
-        action = str(t.get("action", "BUY")).upper()
-        qty = float(t.get("qty", 0.0))
+        outcome = str(t.get("outcome") or "YES").upper()
+        action = str(t.get("action", t.get("side", "BUY"))).upper()
+        qty = float(t.get("qty", t.get("quantity", 0.0)))
 
         key = (portfolio_id, market_id, outcome)
         prev = positions.get(key, 0.0)
@@ -75,12 +75,23 @@ def market_outcome_price_usd(market: dict[str, Any], outcome: str) -> float:
     """
 
     outcome = outcome.upper()
-    prices = market.get("prices")
-    if not isinstance(prices, list) or not prices:
-        yes_price = float(market.get("price", 0.5))
+    outcomes = market.get("outcomes")
+    outcome_prices = market.get("outcome_prices")
+    if isinstance(outcomes, list) and isinstance(outcome_prices, list) and outcome_prices:
+        yes_price = 0.5
+        for index, out in enumerate(outcomes):
+            if index >= len(outcome_prices):
+                continue
+            if str(out).upper() == "YES":
+                yes_price = float(outcome_prices[index])
+                break
     else:
-        last = prices[-1]
-        yes_price = float(last.get("price", 0.5))
+        prices = market.get("prices")
+        if not isinstance(prices, list) or not prices:
+            yes_price = float(market.get("price", 0.5))
+        else:
+            last = prices[-1]
+            yes_price = float(last.get("price", 0.5))
 
     if outcome == "YES":
         return yes_price
@@ -95,7 +106,9 @@ def compute_portfolio_metrics(
     cash = float(portfolio.get("cash_usd", 0.0))
     initial_cash = float(portfolio.get("initial_cash_usd", cash))
 
-    market_by_id = {str(m.get("id")): m for m in markets}
+    market_by_id = {
+        str(m.get("id") or m.get("slug") or m.get("condition_id")): m for m in markets
+    }
     positions = compute_positions(trades)
 
     positions_value = 0.0
