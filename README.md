@@ -167,11 +167,11 @@ AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 
 # Optional local S3-compatible endpoint (MinIO, etc.)
-# AWS_ENDPOINT=http://minio:9000
+AWS_ENDPOINT=minio.lab.sspcloud.fr
 # S3_ENDPOINT_URL=http://minio:9000
 
-# Optional CLOB auth (live-data worker)
-# API_KEY=0xc29abf02109df1a522bcb290f44aae33381723ebbdd98d1f5eefdc36800f71cf
+#necessary polymarket clob api key
+API_KEY=0xc29abf02109df1a522bcb290f44aae33381723ebbdd98d1f5eefdc36800f71cf
 ```
 
 **3. Build containers**
