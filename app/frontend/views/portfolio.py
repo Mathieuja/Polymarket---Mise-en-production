@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import defaultdict
+
 import pandas as pd
 import streamlit as st
 from utils.api_client import APIClient, APIClientError
@@ -14,6 +16,100 @@ from utils.ui import (
     render_page_header,
     render_section_header,
 )
+
+
+def _resolve_market(markets: list[dict], market_id: str) -> dict | None:
+    needle = str(market_id)
+    for market in markets:
+        if str(market.get("slug") or "") == needle:
+            return market
+        if str(market.get("id") or "") == needle:
+            return market
+        if str(market.get("condition_id") or "") == needle:
+            return market
+    return None
+
+
+def _build_position_rows(normalized_trades: list[dict], markets: list[dict]) -> list[dict]:
+    # Keep position quantity and remaining cost basis in sync across BUY/SELL cycles.
+    states: dict[tuple[str, str], dict[str, float]] = defaultdict(
+        lambda: {"qty": 0.0, "cost": 0.0}
+    )
+    ordered = sorted(normalized_trades, key=lambda trade: str(trade.get("ts") or ""))
+
+    for trade in ordered:
+        market_id = str(trade.get("market_id") or "")
+        outcome = str(trade.get("outcome") or "YES").upper()
+        action = str(trade.get("action") or "BUY").upper()
+        qty = float(trade.get("qty") or 0.0)
+        price = float(trade.get("price") or 0.0)
+        if qty <= 0:
+            continue
+
+        key = (market_id, outcome)
+        state = states[key]
+
+        if action == "BUY":
+            state["qty"] += qty
+            state["cost"] += qty * price
+            continue
+
+        # SELL: reduce inventory and cost basis proportionally to current average cost.
+        available = max(0.0, float(state["qty"]))
+        if available <= 0:
+            continue
+        sold = min(available, qty)
+        avg_cost = (state["cost"] / state["qty"]) if state["qty"] > 0 else 0.0
+        state["qty"] = max(0.0, available - sold)
+        state["cost"] = max(0.0, float(state["cost"]) - (avg_cost * sold))
+
+    rows: list[dict] = []
+    for (market_id, outcome), state in states.items():
+        qty = float(state["qty"])
+        if qty <= 0:
+            continue
+
+        market = _resolve_market(markets, market_id)
+        question = (
+            (market or {}).get("question")
+            or (market or {}).get("title")
+            or market_id
+        )
+        outcomes = (market or {}).get("outcomes") or []
+        prices = (market or {}).get("outcome_prices") or []
+
+        avg_cost = (float(state["cost"]) / qty) if qty > 0 else 0.0
+        current_price = avg_cost
+        for index, current_outcome in enumerate(outcomes):
+            if str(current_outcome).upper() == outcome and index < len(prices):
+                try:
+                    current_price = float(prices[index])
+                except Exception:
+                    current_price = avg_cost
+                break
+
+        current_value = qty * current_price
+        pnl = current_value - float(state["cost"])
+        pnl_pct = (pnl / float(state["cost"]) * 100.0) if float(state["cost"]) > 0 else 0.0
+
+        rows.append(
+            {
+                "market_id": market_id,
+                "market_slug": (market or {}).get("slug"),
+                "market": question,
+                "outcome": outcome,
+                "qty": qty,
+                "avg_entry": avg_cost,
+                "current": current_price,
+                "value": current_value,
+                "cost": float(state["cost"]),
+                "pnl": pnl,
+                "pnl_pct": pnl_pct,
+            }
+        )
+
+    rows.sort(key=lambda item: float(item.get("value") or 0.0), reverse=True)
+    return rows
 
 
 def render(api: APIClient) -> None:
@@ -138,67 +234,7 @@ def render(api: APIClient) -> None:
                     st.session_state.selected_portfolio_id = None
                     st.rerun()
 
-        position_rows: list[dict] = []
-        for trade in normalized_trades:
-            market_id = trade["market_id"]
-            outcome = trade["outcome"]
-            key = (market_id, outcome)
-            existing = next((r for r in position_rows if r["key"] == key), None)
-            signed_qty = trade["qty"] if trade["action"] == "BUY" else -trade["qty"]
-            if existing is None:
-                position_rows.append(
-                    {
-                        "key": key,
-                        "market_id": market_id,
-                        "outcome": outcome,
-                        "qty": signed_qty,
-                        "cost": trade["qty"] * trade["price"] if trade["action"] == "BUY" else 0.0,
-                    }
-                )
-            else:
-                if trade["action"] == "BUY":
-                    existing["cost"] += trade["qty"] * trade["price"]
-                existing["qty"] += signed_qty
-
-        display_positions: list[dict] = []
-        markets_by_slug = {str(m.get("slug") or m.get("id")): m for m in markets}
-        for row in position_rows:
-            if row["qty"] <= 0:
-                continue
-            market = markets_by_slug.get(str(row["market_id"]))
-            question = (
-                (market or {}).get("question")
-                or (market or {}).get("title")
-                or row["market_id"]
-            )
-            outcomes = (market or {}).get("outcomes") or []
-            prices = (market or {}).get("outcome_prices") or []
-            current_price = None
-            for index, outcome in enumerate(outcomes):
-                if str(outcome).upper() == row["outcome"] and index < len(prices):
-                    try:
-                        current_price = float(prices[index])
-                    except Exception:
-                        current_price = None
-                    break
-            avg_cost = (row["cost"] / row["qty"]) if row["qty"] > 0 else 0.0
-            if current_price is None:
-                current_price = avg_cost
-            current_value = row["qty"] * current_price
-            pnl = current_value - row["cost"]
-            pnl_pct = (pnl / row["cost"] * 100.0) if row["cost"] > 0 else 0.0
-            display_positions.append(
-                {
-                    "Market": question,
-                    "Outcome": row["outcome"],
-                    "Qty": row["qty"],
-                    "Avg entry": avg_cost,
-                    "Current": current_price,
-                    "Value": current_value,
-                    "PnL": pnl,
-                    "PnL %": pnl_pct,
-                }
-            )
+        display_positions = _build_position_rows(normalized_trades, markets)
 
         st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
         render_section_header(
@@ -206,7 +242,21 @@ def render(api: APIClient) -> None:
             "Detailed open positions for the selected portfolio.",
         )
         if display_positions:
-            df_positions = pd.DataFrame(display_positions)
+            df_positions = pd.DataFrame(
+                [
+                    {
+                        "Market": row["market"],
+                        "Outcome": row["outcome"],
+                        "Qty": row["qty"],
+                        "Avg entry": row["avg_entry"],
+                        "Current": row["current"],
+                        "Value": row["value"],
+                        "PnL": row["pnl"],
+                        "PnL %": row["pnl_pct"],
+                    }
+                    for row in display_positions
+                ]
+            )
             df_positions["Qty"] = df_positions["Qty"].map(lambda value: f"{float(value):.2f}")
             df_positions["Avg entry"] = df_positions["Avg entry"].map(format_currency)
             df_positions["Current"] = df_positions["Current"].map(format_currency)
@@ -218,6 +268,87 @@ def render(api: APIClient) -> None:
                 use_container_width=True,
                 hide_index=True,
             )
+
+            st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+            render_section_header(
+                "Position actions",
+                "Manage each open position quickly from this page.",
+            )
+            for row in display_positions:
+                pnl_text = format_signed_currency(float(row["pnl"]))
+                perf_text = f"{float(row['pnl_pct']):+.1f}%"
+                st.markdown(
+                    (
+                        '<div class="info-card info-card--neutral">'
+                        f"<strong>{row['market']} ({row['outcome']})</strong>"
+                        f"<p>Qty: {float(row['qty']):.2f} | Avg: {format_currency(float(row['avg_entry']))} | "
+                        f"Current: {format_currency(float(row['current']))} | PnL: {pnl_text} ({perf_text})</p>"
+                        "</div>"
+                    ),
+                    unsafe_allow_html=True,
+                )
+
+                col_open, col_liquidate = st.columns([1, 1])
+                with col_open:
+                    if st.button(
+                        "Open market",
+                        key=f"open_market_{selected}_{row['market_id']}_{row['outcome']}",
+                        use_container_width=True,
+                    ):
+                        st.session_state.selected_portfolio_id = selected
+                        st.session_state.nav_override = "Trading"
+                        st.session_state.trading_view = "detail"
+                        if row.get("market_slug"):
+                            st.session_state.active_market_slug = row["market_slug"]
+                        st.rerun()
+                with col_liquidate:
+                    if st.button(
+                        "Liquidate",
+                        key=f"liquidate_{selected}_{row['market_id']}_{row['outcome']}",
+                        use_container_width=True,
+                    ):
+                        try:
+                            api.create_trade(
+                                portfolio_id=str(selected),
+                                market_id=str(row["market_id"]),
+                                outcome=str(row["outcome"]),
+                                action="SELL",
+                                qty=float(row["qty"]),
+                                price=float(row["current"]),
+                                token=token,
+                                notes="Auto-liquidation from portfolio view",
+                            )
+                        except APIClientError as exc:
+                            render_api_error_state(exc, resource="position liquidation")
+                        else:
+                            st.success("Position liquidated")
+                            st.rerun()
+
+            if normalized_trades:
+                st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+                render_section_header(
+                    "Recent trades",
+                    "Latest executions for the selected portfolio.",
+                )
+                recent_df = pd.DataFrame(normalized_trades).sort_values(by="ts", ascending=False).head(12)
+                if not recent_df.empty:
+                    recent_df = recent_df.rename(
+                        columns={
+                            "market_id": "Market ID",
+                            "outcome": "Outcome",
+                            "action": "Action",
+                            "qty": "Qty",
+                            "price": "Price",
+                            "ts": "Timestamp",
+                        }
+                    )
+                    recent_df["Qty"] = recent_df["Qty"].map(lambda value: f"{float(value):.2f}")
+                    recent_df["Price"] = recent_df["Price"].map(format_currency)
+                    st.dataframe(
+                        dataframe_with_default_style(recent_df),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
         else:
             render_empty_state(
                 "No open positions.",
