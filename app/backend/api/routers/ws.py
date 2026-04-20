@@ -4,7 +4,7 @@ import asyncio
 from typing import Optional
 
 from app_shared.database import SessionLocal, User
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
 from app.backend.api.core.security import decode_access_token
 from app.backend.api.services.market_stream_service import MarketStreamService
@@ -47,12 +47,25 @@ def _resolve_user_from_token(token: str) -> Optional[User]:
         db.close()
 
 
+def _resolve_user_from_authorization_header(authorization: str | None) -> Optional[User]:
+    if not authorization:
+        return None
+    value = authorization.strip()
+    if not value.lower().startswith("bearer "):
+        return None
+    token = value[7:].strip()
+    if not token:
+        return None
+    return _resolve_user_from_token(token)
+
+
 @router.websocket("/ws/live")
 async def websocket_live_data(
     websocket: WebSocket,
-    token: str = Query(..., description="JWT access token"),
 ):
-    user = _resolve_user_from_token(token)
+    user = _resolve_user_from_authorization_header(
+        websocket.headers.get("authorization")
+    )
     if user is None:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return

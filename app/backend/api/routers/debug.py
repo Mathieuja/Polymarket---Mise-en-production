@@ -13,14 +13,15 @@ import os
 import boto3
 from app_shared.database import IngestionBatch, Market, User, get_db
 from botocore.config import Config
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.backend.api.dependencies.auth import get_current_active_user_from_query_token
+from app.backend.api.dependencies.auth import verify_token
 
 router = APIRouter(
     prefix="/debug",
     tags=["debug"],
+    dependencies=[Depends(verify_token)],
 )
 
 
@@ -68,7 +69,6 @@ def _read_jsonl_rows(bucket: str, key: str, limit: int) -> list[dict]:
     summary="Test database connection",
 )
 def health(
-    current_user: User = Depends(get_current_active_user_from_query_token),
     db: Session = Depends(get_db),
 ):
     """
@@ -78,7 +78,6 @@ def health(
         dict: Status and count of key entities
     """
     try:
-        _ = current_user
         user_count = db.query(User).count()
         market_count = db.query(Market).count()
         return {
@@ -100,7 +99,6 @@ def health(
     summary="Get latest auto-increment IDs",
 )
 def latest_increment(
-    current_user: User = Depends(get_current_active_user_from_query_token),
     db: Session = Depends(get_db),
 ):
     """
@@ -109,7 +107,6 @@ def latest_increment(
     Useful for verifying that the ingestion pipeline is advancing.
     """
     try:
-        _ = current_user
         latest_market = db.query(Market).order_by(Market.id.desc()).first()
         latest_batch = db.query(IngestionBatch).order_by(IngestionBatch.id.desc()).first()
 
@@ -132,7 +129,6 @@ def latest_increment(
     summary="Get latest full batch",
 )
 def latest_full_batch(
-    current_user: User = Depends(get_current_active_user_from_query_token),
     db: Session = Depends(get_db),
 ):
     """
@@ -141,7 +137,6 @@ def latest_full_batch(
     Useful for monitoring full sync progress.
     """
     try:
-        _ = current_user
         batch = (
             db.query(IngestionBatch)
             .filter(IngestionBatch.sync_type == "full")
@@ -184,8 +179,7 @@ def latest_full_batch(
     summary="Read latest raw markets from S3",
 )
 def latest_raw_markets(
-    current_user: User = Depends(get_current_active_user_from_query_token),
-    sync_type: str = Path(..., description="full or incremental"),
+    sync_type: str,
     limit: int = 1,
     db: Session = Depends(get_db),
 ):
@@ -198,7 +192,6 @@ def latest_raw_markets(
         sync_type: "full" or "incremental"
         limit: Number of rows to return (max 100)
     """
-    _ = current_user
     sync_type = sync_type.strip().lower()
     if sync_type not in {"full", "incremental"}:
         raise HTTPException(
@@ -259,15 +252,9 @@ def latest_raw_markets(
 def latest_raw_full_markets(
     limit: int = 1,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user_from_query_token),
 ):
     """Shortcut endpoint for latest raw full batch."""
-    return latest_raw_markets(
-        sync_type="full",
-        limit=limit,
-        db=db,
-        current_user=current_user,
-    )
+    return latest_raw_markets(sync_type="full", limit=limit, db=db)
 
 
 @router.get(
@@ -278,12 +265,6 @@ def latest_raw_full_markets(
 def latest_raw_incremental_markets(
     limit: int = 1,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user_from_query_token),
 ):
     """Shortcut endpoint for latest raw incremental batch."""
-    return latest_raw_markets(
-        sync_type="incremental",
-        limit=limit,
-        db=db,
-        current_user=current_user,
-    )
+    return latest_raw_markets(sync_type="incremental", limit=limit, db=db)

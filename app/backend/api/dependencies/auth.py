@@ -1,33 +1,22 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from app_shared.database import User, get_db
-from fastapi import Depends, Header, HTTPException, Query, status
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.backend.api.core.security import decode_access_token
 
-
-def _extract_bearer_token(authorization: Optional[str]) -> Optional[str]:
-    if not authorization:
-        return None
-    value = authorization.strip()
-    if not value.lower().startswith("bearer "):
-        return None
-    token = value[7:].strip()
-    return token or None
+security = HTTPBearer()
 
 
-def get_current_active_user(
-    db: Session = Depends(get_db),
-    authorization: Optional[str] = Header(default=None),
-    token: Optional[str] = Query(default=None),
-) -> User:
-    """Resolve authenticated user from Authorization header or query token."""
+def verify_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> str:
+    """Validate Authorization: Bearer <jwt> and return raw token."""
 
-    raw_token = _extract_bearer_token(authorization) or (token.strip() if token else None)
-    if not raw_token:
+    token = (credentials.credentials or "").strip()
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication token is required",
@@ -35,7 +24,7 @@ def get_current_active_user(
         )
 
     try:
-        payload = decode_access_token(raw_token)
+        payload = decode_access_token(token)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -51,37 +40,17 @@ def get_current_active_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.query(User).filter(User.email == email).first()
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    return user
+    return token
 
 
-def get_current_active_user_from_query_token(
-    token: str = Query(..., description="JWT access token"),
+def get_current_active_user(
     db: Session = Depends(get_db),
+    token: str = Depends(verify_token),
 ) -> User:
-    """Resolve authenticated user from REQUIRED query token.
-
-    This is used for endpoints where the token must appear as a required
-    query parameter in OpenAPI/Swagger.
-    """
-
-    raw_token = token.strip()
-    if not raw_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication token is required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    """Resolve authenticated user from Bearer JWT token."""
 
     try:
-        payload = decode_access_token(raw_token)
+        payload = decode_access_token(token)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
