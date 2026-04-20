@@ -151,6 +151,107 @@ def _estimate_executions(
     return executions, remaining, total, vwap
 
 
+def _levels_table_html(title: str, levels: list[tuple[float, float]], tone: str) -> str:
+    rows = "".join(
+        (
+            "<tr>"
+            f"<td>{price:.4f}</td>"
+            f"<td>{qty:.2f}</td>"
+            "</tr>"
+        )
+        for price, qty in levels[:10]
+    )
+    if not rows:
+        rows = '<tr><td colspan="2">No levels</td></tr>'
+
+    return (
+        f'<div class="ob-panel ob-panel--{tone}">'
+        f'<div class="ob-panel__title">{title}</div>'
+        '<table class="ob-table">'
+        "<thead><tr><th>Price</th><th>Qty</th></tr></thead>"
+        f"<tbody>{rows}</tbody>"
+        "</table>"
+        "</div>"
+    )
+
+
+def _build_depth_chart_for_outcome(book: dict, outcome: str) -> go.Figure:
+    asks = list(book.get("asks", []))
+    bids = list(book.get("bids", []))
+
+    def cumulative(levels: list[tuple[float, float]]) -> tuple[list[float], list[float]]:
+        qty_cum: list[float] = []
+        prices: list[float] = []
+        total = 0.0
+        for price, qty in levels:
+            total += float(qty)
+            qty_cum.append(total)
+            prices.append(float(price))
+        return qty_cum, prices
+
+    asks_x, asks_y = cumulative(asks)
+    bids_x, bids_y = cumulative(bids)
+
+    fig = go.Figure()
+    if asks_x and asks_y:
+        fig.add_trace(
+            go.Scatter(
+                x=asks_x,
+                y=asks_y,
+                mode="lines",
+                name="Asks",
+                line={"color": "#b5474f", "width": 2, "shape": "hv"},
+                fill="tozerox",
+                fillcolor="rgba(181,71,79,0.16)",
+            )
+        )
+    if bids_x and bids_y:
+        fig.add_trace(
+            go.Scatter(
+                x=bids_x,
+                y=bids_y,
+                mode="lines",
+                name="Bids",
+                line={"color": "#18794e", "width": 2, "shape": "hv"},
+                fill="tozerox",
+                fillcolor="rgba(24,121,78,0.16)",
+            )
+        )
+
+    fig.update_layout(
+        title=f"Depth - {outcome}",
+        margin={"l": 10, "r": 10, "t": 40, "b": 10},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Cumulative quantity",
+        yaxis_title="Price",
+        legend={"orientation": "h", "y": 1.02, "x": 0},
+        height=330,
+    )
+    return fig
+
+
+def _render_depth_charts(orderbook_by_outcome: dict[str, dict]) -> None:
+    outcomes = list(orderbook_by_outcome.keys())
+    if not outcomes:
+        return
+
+    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+    st.markdown("#### Depth charts")
+
+    per_row = 2
+    for start in range(0, len(outcomes), per_row):
+        row_outcomes = outcomes[start : start + per_row]
+        columns = st.columns(len(row_outcomes))
+        for column, outcome in zip(columns, row_outcomes):
+            with column:
+                chart = _build_depth_chart_for_outcome(
+                    orderbook_by_outcome.get(outcome, {}),
+                    outcome,
+                )
+                st.plotly_chart(chart, use_container_width=True, config={"displayModeBar": False})
+
+
 def _render_orderbook_block(orderbook_by_outcome: dict[str, dict]) -> None:
     outcomes = list(orderbook_by_outcome.keys())
     if not outcomes:
@@ -161,6 +262,64 @@ def _render_orderbook_block(orderbook_by_outcome: dict[str, dict]) -> None:
         )
         return
 
+    st.markdown(
+        """
+        <style>
+        .ob-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.65rem;
+        }
+        .ob-panel {
+            border: 1px solid #d6e3eb;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #fbfdfe;
+        }
+        .ob-panel__title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 0.45rem 0.65rem;
+        }
+        .ob-panel--ask .ob-panel__title {
+            color: #b5474f;
+            background: #f9e1e4;
+        }
+        .ob-panel--bid .ob-panel__title {
+            color: #18794e;
+            background: #dbf2e5;
+        }
+        .ob-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .ob-table th,
+        .ob-table td {
+            padding: 0.36rem 0.58rem;
+            text-align: right;
+            color: #12354a;
+            font-size: 0.86rem;
+        }
+        .ob-table th {
+            font-weight: 700;
+            color: #5b7486;
+            border-bottom: 1px solid #d6e3eb;
+        }
+        .ob-table tbody tr + tr td {
+            border-top: 1px solid #edf3f7;
+        }
+        .ob-table tbody tr td:first-child,
+        .ob-table thead tr th:first-child {
+            text-align: left;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     columns = st.columns(len(outcomes))
     for column, outcome in zip(columns, outcomes):
         with column:
@@ -169,19 +328,19 @@ def _render_orderbook_block(orderbook_by_outcome: dict[str, dict]) -> None:
             bids = book.get("bids", [])[:8]
 
             st.markdown(f"#### {outcome}")
-            ask_df = pd.DataFrame(asks, columns=["Price", "Qty"])
-            bid_df = pd.DataFrame(bids, columns=["Price", "Qty"])
-
-            if ask_df.empty and bid_df.empty:
+            if not asks and not bids:
                 st.caption("No levels")
                 continue
 
-            if not ask_df.empty:
-                st.caption("Asks")
-                st.dataframe(ask_df, use_container_width=True, hide_index=True)
-            if not bid_df.empty:
-                st.caption("Bids")
-                st.dataframe(bid_df, use_container_width=True, hide_index=True)
+            st.markdown(
+                (
+                    '<div class="ob-grid">'
+                    f'{_levels_table_html("Asks", asks, "ask")}'
+                    f'{_levels_table_html("Bids", bids, "bid")}'
+                    "</div>"
+                ),
+                unsafe_allow_html=True,
+            )
 
 
 def _refresh_orderbook(api: APIClient, market: dict, token: str | None) -> dict:
@@ -461,6 +620,7 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
 
     if st.session_state[show_key]:
         _render_orderbook_block(orderbook_by_outcome)
+        _render_depth_charts(orderbook_by_outcome)
 
     render_section_header(
         "Trade ticket",
