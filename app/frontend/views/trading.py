@@ -126,7 +126,11 @@ def _render_market_list(api: APIClient, portfolios: list[dict], token: str | Non
             cols[0].metric("YES", format_probability(float(market["yes_price"])))
             cols[1].metric("NO", format_probability(float(market["no_price"])))
             cols[2].metric("24h volume", format_quantity(float(market["volume_24h"])))
-            if cols[3].button("Open", key=f"open_market_{market['slug']}", use_container_width=True):
+            if cols[3].button(
+                "Open",
+                key=f"open_market_{market['slug']}",
+                use_container_width=True,
+            ):
                 st.session_state.active_market_slug = market["slug"]
                 st.session_state.trading_view = "detail"
                 st.rerun()
@@ -194,11 +198,15 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
               <div class="split-pills">
                 <div class="split-pill split-pill--yes">
                   <div class="split-pill__label">YES</div>
-                  <div class="split-pill__value">{format_probability(float(market['yes_price']))}</div>
+                                    <div class="split-pill__value">
+                                        {format_probability(float(market['yes_price']))}
+                                    </div>
                 </div>
                 <div class="split-pill split-pill--no">
                   <div class="split-pill__label">NO</div>
-                  <div class="split-pill__value">{format_probability(float(market['no_price']))}</div>
+                                    <div class="split-pill__value">
+                                        {format_probability(float(market['no_price']))}
+                                    </div>
                 </div>
               </div>
             </section>
@@ -292,7 +300,10 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
         st.rerun()
 
     st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-    render_section_header("Order book", "Live order book snapshot when stream endpoint is available.")
+    render_section_header(
+        "Order book",
+        "Live order book snapshot when stream endpoint is available.",
+    )
     try:
         orderbook = api.get_orderbook(token=token)
         st.session_state.orderbook = orderbook

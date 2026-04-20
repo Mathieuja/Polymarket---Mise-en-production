@@ -57,4 +57,8 @@ def logout() -> None:
     st.session_state.is_authenticated = False
     st.session_state.token = None
     st.session_state.user_email = None
+    st.session_state.user = None
     st.session_state.nav_page = "Login"
+    st.session_state.nav_override = None
+    st.session_state.trading_view = "list"
+    st.session_state.active_market_slug = None
