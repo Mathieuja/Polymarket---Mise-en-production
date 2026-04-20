@@ -299,7 +299,9 @@ class PortfolioService:
         quantities: dict[tuple[str, str], float] = defaultdict(float)
         for trade in trades:
             key = (trade.market_id, trade.outcome.upper())
-            quantities[key] += float(trade.quantity) if trade.side == "buy" else -float(trade.quantity)
+            quantities[key] += (
+                float(trade.quantity) if trade.side == "buy" else -float(trade.quantity)
+            )
 
         total = 0.0
         for (market_id, outcome), quantity in quantities.items():

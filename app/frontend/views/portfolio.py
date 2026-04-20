@@ -281,8 +281,10 @@ def render(api: APIClient) -> None:
                     (
                         '<div class="info-card info-card--neutral">'
                         f"<strong>{row['market']} ({row['outcome']})</strong>"
-                        f"<p>Qty: {float(row['qty']):.2f} | Avg: {format_currency(float(row['avg_entry']))} | "
-                        f"Current: {format_currency(float(row['current']))} | PnL: {pnl_text} ({perf_text})</p>"
+                        f"<p>Qty: {float(row['qty']):.2f} | Avg: "
+                        f"{format_currency(float(row['avg_entry']))} | Current: "
+                        f"{format_currency(float(row['current']))} | PnL: {pnl_text} "
+                        f"({perf_text})</p>"
                         "</div>"
                     ),
                     unsafe_allow_html=True,
@@ -330,7 +332,11 @@ def render(api: APIClient) -> None:
                     "Recent trades",
                     "Latest executions for the selected portfolio.",
                 )
-                recent_df = pd.DataFrame(normalized_trades).sort_values(by="ts", ascending=False).head(12)
+                recent_df = (
+                    pd.DataFrame(normalized_trades)
+                    .sort_values(by="ts", ascending=False)
+                    .head(12)
+                )
                 if not recent_df.empty:
                     recent_df = recent_df.rename(
                         columns={
