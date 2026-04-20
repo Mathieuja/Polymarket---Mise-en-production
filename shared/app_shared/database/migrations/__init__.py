@@ -49,7 +49,10 @@ def run_migrations(engine: Engine) -> None:
     with engine.begin() as connection:
         # Ensure only one process applies migrations at a time.
         if engine.dialect.name == "postgresql":
-            connection.execute(text("SELECT pg_advisory_xact_lock(:lock_key)"), {"lock_key": MIGRATION_LOCK_KEY})
+            connection.execute(
+                text("SELECT pg_advisory_xact_lock(:lock_key)"),
+                {"lock_key": MIGRATION_LOCK_KEY},
+            )
 
         connection.execute(
             text(
