@@ -306,7 +306,11 @@ class APIClient:
             raise APIClientError("Market not found")
         return self._get_json(f"/markets/by-slug/{slug}", token=token)
 
-    def get_market_by_condition(self, condition_id: str, token: str | None = None) -> dict[str, Any]:
+    def get_market_by_condition(
+        self,
+        condition_id: str,
+        token: str | None = None,
+    ) -> dict[str, Any]:
         if self.backend_mode == "mock":
             for market in _load_fixture("markets.json"):
                 if str(market.get("condition_id")) == str(condition_id):
