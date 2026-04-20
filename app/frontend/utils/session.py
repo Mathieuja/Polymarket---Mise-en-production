@@ -36,12 +36,10 @@ def init_session_state() -> None:
 
 def _init_mock_data_if_needed() -> None:
     if st.session_state.get("mock_portfolios") is None:
-        st.session_state.mock_portfolios = _read_fixture_json("portfolios.json")
-        for p in st.session_state.mock_portfolios:
-            p.setdefault("initial_cash_usd", float(p.get("cash_usd", 0.0)))
+        st.session_state.mock_portfolios = []
 
     if st.session_state.get("mock_trades") is None:
-        st.session_state.mock_trades = _read_fixture_json("trades.json")
+        st.session_state.mock_trades = []
 
     if st.session_state.get("selected_portfolio_id") is None and st.session_state.mock_portfolios:
         st.session_state.selected_portfolio_id = st.session_state.mock_portfolios[0].get("id")

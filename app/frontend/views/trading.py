@@ -627,6 +627,17 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
         "Execution price is driven by orderbook levels, as in the legacy trading flow.",
     )
     portfolio_ids = [str(p.get("id") or p.get("_id")) for p in portfolios]
+    if not portfolio_ids:
+        render_info_card(
+            "No portfolio available",
+            "Create a portfolio before submitting a trade.",
+            tone="warning",
+        )
+        if st.button("Create portfolio", key="create_portfolio_from_trade"):
+            st.session_state.nav_override = "Portfolio"
+            st.rerun()
+        return
+
     selected_portfolio_id = str(st.session_state.get("selected_portfolio_id") or portfolio_ids[0])
     if selected_portfolio_id not in portfolio_ids:
         selected_portfolio_id = portfolio_ids[0]
@@ -678,6 +689,10 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
             )
 
     if st.button("Submit trade", type="primary", disabled=best_price is None):
+        if not selected_portfolio_id:
+            st.error("Create a portfolio before submitting a trade.")
+            return
+
         market_id = str(market.get("id") or market.get("slug"))
         executions, _, _, _ = _estimate_executions(levels, float(qty))
         if not executions:
@@ -700,6 +715,7 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
             render_api_error_state(exc, resource="trade creation")
             return
         st.success("Trade submitted")
+        st.balloons()
         st.rerun()
 
 

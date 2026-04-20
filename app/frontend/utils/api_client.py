@@ -571,19 +571,7 @@ def _load_fixture(name: str) -> Any:
 def _mock_portfolios() -> list[dict[str, Any]]:
     value = st.session_state.get("mock_portfolios")
     if value is None:
-        raw = list(_load_fixture("portfolios.json"))
-        for p in raw:
-            if "id" not in p and "_id" in p:
-                p["id"] = p["_id"]
-            if "cash_balance" not in p:
-                p["cash_balance"] = float(
-                    p.get("cash_usd", p.get("initial_balance", p.get("initial_cash_usd", 0.0)))
-                )
-            if "initial_balance" not in p:
-                p["initial_balance"] = float(
-                    p.get("initial_cash_usd", p.get("cash_balance", 0.0))
-                )
-        return raw
+        return []
     return list(value)
 
 
@@ -594,17 +582,7 @@ def _set_mock_portfolios(portfolios: list[dict[str, Any]]) -> None:
 def _mock_trades() -> list[dict[str, Any]]:
     value = st.session_state.get("mock_trades")
     if value is None:
-        raw = list(_load_fixture("trades.json"))
-        for trade in raw:
-            if "id" not in trade and "_id" in trade:
-                trade["id"] = trade["_id"]
-            if "side" not in trade and "action" in trade:
-                trade["side"] = str(trade["action"]).lower()
-            if "quantity" not in trade and "qty" in trade:
-                trade["quantity"] = float(trade["qty"])
-            if "created_at" not in trade and "ts" in trade:
-                trade["created_at"] = trade["ts"]
-        return raw
+        return []
     return list(value)
 
 
