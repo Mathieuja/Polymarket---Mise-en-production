@@ -148,7 +148,8 @@ Minimal example:
 BACKEND_MODE=api
 API_URL=http://localhost:8000
 APP_NAME=Polymarket Paper Trading
-JWT_SECRET=change-me-please
+
+#JWT_SECRET=change-me-please
 
 # PostgreSQL
 POSTGRES_DB=polymarket_db
@@ -163,13 +164,18 @@ REDIS_PORT=6379
 S3_RAW_BUCKET=your-bucket-name
 S3_RAW_PREFIX=polymarket/raw
 AWS_REGION=eu-west-3
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
+AWS_ACCESS_KEY_ID=... put your own
+AWS_SECRET_ACCESS_KEY=... put your own
+AWS_SESSION_TOKEN=... put your own
 
 AWS_ENDPOINT=minio.lab.sspcloud.fr
 
+# Optional tuning
+WORKER_CONSOLE_LOG_LEVEL=INFO
+TRANSFORM_POLL_INTERVAL_SECONDS=20
+TRANSFORM_BATCH_LIMIT=5
 
-# S3_ENDPOINT_URL=http://minio:9000
+
 
 #necessary polymarket clob api key
 API_KEY=0xc29abf02109df1a522bcb290f44aae33381723ebbdd98d1f5eefdc36800f71cf
