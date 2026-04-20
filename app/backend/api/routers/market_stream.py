@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from app_shared.database import User
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from app.backend.api.dependencies.auth import get_current_active_user_from_query_token
 from app.backend.api.schemas.market_stream import (
@@ -16,7 +17,6 @@ from app.backend.api.services.market_stream_service import MarketStreamService
 router = APIRouter(
     prefix="/market-stream",
     tags=["Market Stream"],
-    dependencies=[Depends(get_current_active_user_from_query_token)],
 )
 
 
@@ -25,10 +25,14 @@ router = APIRouter(
     summary="Start live data stream",
     response_model=StreamStartResponse,
 )
-async def start_stream(asset_id: str) -> StreamStartResponse:
+async def start_stream(
+    current_user: User = Depends(get_current_active_user_from_query_token),
+    asset_id: str = Path(..., description="One or more comma-separated asset ids"),
+) -> StreamStartResponse:
     """Start streaming live data for one or more comma-separated assets."""
 
     try:
+        _ = current_user
         asset_ids = [value.strip() for value in asset_id.split(",") if value.strip()]
         if not asset_ids:
             raise HTTPException(
@@ -57,10 +61,13 @@ async def start_stream(asset_id: str) -> StreamStartResponse:
     summary="Stop live data stream",
     response_model=StreamStopResponse,
 )
-async def stop_stream() -> StreamStopResponse:
+async def stop_stream(
+    current_user: User = Depends(get_current_active_user_from_query_token),
+) -> StreamStopResponse:
     """Stop live data streaming and clear live worker cache."""
 
     try:
+        _ = current_user
         MarketStreamService().stop_stream()
         return StreamStopResponse(
             status="stopped",
@@ -79,10 +86,13 @@ async def stop_stream() -> StreamStopResponse:
     summary="Get all streamed messages",
     response_model=OrderbookResponse,
 )
-async def get_messages() -> OrderbookResponse:
+async def get_messages(
+    current_user: User = Depends(get_current_active_user_from_query_token),
+) -> OrderbookResponse:
     """Return current orderbook snapshot from Redis JSON."""
 
     try:
+        _ = current_user
         messages = MarketStreamService().get_orderbook_snapshot()
         return OrderbookResponse(
             status="ok",
@@ -101,10 +111,13 @@ async def get_messages() -> OrderbookResponse:
     summary="Get latest streamed message",
     response_model=LatestMessageResponse,
 )
-async def get_latest_message() -> LatestMessageResponse:
+async def get_latest_message(
+    current_user: User = Depends(get_current_active_user_from_query_token),
+) -> LatestMessageResponse:
     """Return latest entry from Redis stream."""
 
     try:
+        _ = current_user
         message = MarketStreamService().get_latest_message()
         if message is None:
             return LatestMessageResponse(status="no_data", message=None)

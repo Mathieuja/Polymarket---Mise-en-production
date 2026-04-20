@@ -9,8 +9,8 @@ Endpoints for:
 """
 from typing import Optional
 
-from app_shared.database import get_db
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from app_shared.database import User, get_db
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
 from app.backend.api.schemas.market_responses import (
@@ -29,7 +29,6 @@ from app.backend.api.services.polymarket_api import get_polymarket_api
 router = APIRouter(
     prefix="/markets",
     tags=["markets"],
-    dependencies=[Depends(get_current_active_user_from_query_token)],
 )
 
 
@@ -47,6 +46,7 @@ def get_market_service(db: Session = Depends(get_db)) -> MarketService:
     summary="List markets with filters",
 )
 async def list_markets(
+    current_user: User = Depends(get_current_active_user_from_query_token),
     market_service: MarketService = Depends(get_market_service),
     # Filter parameters
     search: Optional[str] = Query(None, description="Text search in question/description"),
@@ -89,6 +89,8 @@ async def list_markets(
         sort_desc=sort_desc,
     )
 
+    _ = current_user
+
     return await market_service.list_markets(filters)
 
 
@@ -98,6 +100,7 @@ async def list_markets(
     summary="Get top markets",
 )
 async def get_top_markets(
+    current_user: User = Depends(get_current_active_user_from_query_token),
     market_service: MarketService = Depends(get_market_service),
     limit: int = Query(20, ge=1, le=100, description="Number of markets"),
     sort_by: str = Query("volume", description="Sort field: volume_24h, volume, liquidity"),
@@ -108,6 +111,8 @@ async def get_top_markets(
 
     Quick endpoint for dashboard widgets showing top markets.
     """
+    _ = current_user
+
     return await market_service.get_top_markets(
         limit=limit,
         sort_by=sort_by,
@@ -121,6 +126,7 @@ async def get_top_markets(
     summary="Get sync statistics",
 )
 async def get_sync_stats(
+    current_user: User = Depends(get_current_active_user_from_query_token),
     market_service: MarketService = Depends(get_market_service),
 ):
     """
@@ -128,6 +134,7 @@ async def get_sync_stats(
 
     Shows total markets, active/closed counts, and sync timestamps.
     """
+    _ = current_user
     stats = await market_service.get_sync_stats()
     return stats
 
@@ -144,7 +151,8 @@ async def get_sync_stats(
     summary="Get price history by slug",
 )
 async def get_price_history(
-    slug: str,
+    current_user: User = Depends(get_current_active_user_from_query_token),
+    slug: str = Path(..., description="Market slug"),
     market_service: MarketService = Depends(get_market_service),
     outcome_index: int = Query(0, ge=0, le=10, description="Outcome index (0=first, 1=second)"),
     start_ts: Optional[int] = Query(None, description="Start Unix timestamp"),
@@ -159,6 +167,8 @@ async def get_price_history(
     - **outcome_index**: 0 for first outcome (e.g., "Yes"), 1 for second (e.g., "No")
     - **start_ts/end_ts**: Unix timestamps for time range filter
     """
+    _ = current_user
+
     prices = await market_service.get_price_history(
         slug=slug,
         outcome_index=outcome_index,
@@ -182,7 +192,8 @@ async def get_price_history(
     summary="Get market by slug",
 )
 async def get_market_by_slug(
-    slug: str,
+    current_user: User = Depends(get_current_active_user_from_query_token),
+    slug: str = Path(..., description="Market slug"),
     market_service: MarketService = Depends(get_market_service),
     force_refresh: bool = Query(False, description="Force fetch from Polymarket API"),
 ):
@@ -192,6 +203,7 @@ async def get_market_by_slug(
     Lazy-loads from Polymarket API if not cached.
     Use `force_refresh=true` to always fetch fresh data.
     """
+    _ = current_user
     market = await market_service.get_market_by_slug(slug, force_refresh=force_refresh)
 
     if not market:
@@ -209,7 +221,8 @@ async def get_market_by_slug(
     summary="Get market by condition ID",
 )
 async def get_market_by_condition_id(
-    condition_id: str,
+    current_user: User = Depends(get_current_active_user_from_query_token),
+    condition_id: str = Path(..., description="On-chain condition ID"),
     market_service: MarketService = Depends(get_market_service),
     force_refresh: bool = Query(False, description="Force fetch from Polymarket API"),
 ):
@@ -218,6 +231,7 @@ async def get_market_by_condition_id(
 
     Lazy-loads from Polymarket API if not cached.
     """
+    _ = current_user
     market = await market_service.get_market_by_condition_id(
         condition_id, force_refresh=force_refresh
     )
@@ -240,7 +254,8 @@ async def get_market_by_condition_id(
     summary="Get open interest for markets",
 )
 async def get_open_interest(
-    slugs: list[str],
+    current_user: User = Depends(get_current_active_user_from_query_token),
+    slugs: list[str] = Body(..., description="List of market slugs"),
     market_service: MarketService = Depends(get_market_service),
     force_refresh: bool = Query(False, description="Force fetch from Data API"),
 ):
@@ -249,6 +264,8 @@ async def get_open_interest(
 
     POST with list of slugs in request body.
     """
+    _ = current_user
+
     if not slugs:
         return []
 
@@ -267,12 +284,14 @@ async def get_open_interest(
     summary="Manually trigger market refresh",
 )
 async def admin_refresh_markets(
+    current_user: User = Depends(get_current_active_user_from_query_token),
     market_service: MarketService = Depends(get_market_service),
     limit: int = Query(100, ge=1, le=1000, description="Max markets to sync"),
     active_only: bool = Query(True, description="Only sync active markets"),
 ):
     """Fetch fresh markets from Gamma API and upsert into PostgreSQL cache."""
 
+    _ = current_user
     api = await get_polymarket_api()
 
     filters = {}
