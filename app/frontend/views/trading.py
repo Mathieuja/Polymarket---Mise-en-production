@@ -220,12 +220,13 @@ def _build_depth_chart_for_outcome(book: dict, outcome: str) -> go.Figure:
 
     fig.update_layout(
         title=f"Depth - {outcome}",
+        title_font={"color": "#111111"},
         margin={"l": 10, "r": 10, "t": 40, "b": 10},
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis_title="Cumulative quantity",
         yaxis_title="Price",
-        legend={"orientation": "h", "y": 1.02, "x": 0},
+        legend={"orientation": "h", "y": 1.02, "x": 0, "font": {"color": "#111111"}},
         height=330,
     )
     return fig
@@ -714,12 +715,18 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
         except APIClientError as exc:
             render_api_error_state(exc, resource="trade creation")
             return
-        st.success("Trade submitted")
-        st.balloons()
+        st.session_state.trade_submit_success_message = "Trade submitted"
+        st.session_state.trade_submit_success_animate = True
         st.rerun()
 
 
 def render(api: APIClient) -> None:
+    if st.session_state.get("trade_submit_success_animate"):
+        st.success(st.session_state.get("trade_submit_success_message") or "Trade submitted")
+        st.balloons()
+        st.session_state.trade_submit_success_animate = False
+        st.session_state.trade_submit_success_message = None
+
     render_page_header(
         "Trading workspace",
         (

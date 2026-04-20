@@ -518,7 +518,6 @@ html, body, [class*="css"] {
 .block-container [data-testid="stSlider"] label p,
 .block-container [data-testid="stCheckbox"] label,
 .block-container [data-testid="stRadio"] label,
-.block-container [data-testid="stButton"] button,
 .block-container [data-testid="stDownloadButton"] button {
     color: var(--text) !important;
 }
@@ -533,11 +532,26 @@ html, body, [class*="css"] {
 
 .stButton > button {
     border-radius: 999px;
-    border: 1px solid rgba(31, 96, 116, 0.15);
-    background: linear-gradient(180deg, #2b7388 0%, #1f6074 100%);
-    color: white;
+    border: 1px solid #194b5e;
+    background: linear-gradient(180deg, #2f7f98 0%, #1f6074 100%);
+    color: #ffffff !important;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
     font-weight: 700;
     padding: 0.55rem 1rem;
+    box-shadow: 0 3px 12px rgba(18, 53, 74, 0.22);
+}
+
+.stButton > button:hover {
+    border-color: #12354a;
+    background: linear-gradient(180deg, #388ca7 0%, #245f76 100%);
+    color: #ffffff !important;
+}
+
+.stButton > button:focus,
+.stButton > button:focus-visible {
+    outline: 3px solid rgba(31, 96, 116, 0.28);
+    outline-offset: 1px;
+    color: #ffffff !important;
 }
 
 [data-testid="stTabs"] button[role="tab"] {
