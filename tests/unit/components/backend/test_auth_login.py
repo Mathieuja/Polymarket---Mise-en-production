@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -40,3 +42,31 @@ def test_login_invalid_credentials(monkeypatch) -> None:
         r = client.post("/auth/login", json={"email": "demo@example.com", "password": "wrong"})
 
     assert r.status_code == 401
+
+
+def test_login_sets_cookie_and_authorizes_followup_requests(monkeypatch) -> None:
+    email = f"cookie-{uuid4().hex[:8]}@example.com"
+
+    monkeypatch.setenv("BACKEND_MODE", "api")
+    monkeypatch.setenv("JWT_SECRET", "test-secret")
+
+    with TestClient(app) as client:
+        register_response = client.post(
+            "/auth/register",
+            json={"name": "Cookie User", "email": email, "password": "password123"},
+        )
+        assert register_response.status_code == 201
+        assert register_response.cookies.get("access_token")
+
+        login_response = client.post(
+            "/auth/login",
+            json={"email": email, "password": "password123"},
+        )
+
+        assert login_response.status_code == 200
+        assert login_response.cookies.get("access_token")
+
+        me_response = client.get("/auth/me")
+
+    assert me_response.status_code == 200
+    assert me_response.json()["email"] == email

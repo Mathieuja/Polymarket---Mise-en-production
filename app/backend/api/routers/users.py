@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from app_shared.database import User, get_db
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.backend.api.core.security import create_access_token, get_password_hash
-from app.backend.api.routers.auth import LoginResponse
+from app.backend.api.routers.auth import AUTH_COOKIE_NAME, LoginResponse
 from app.backend.api.schemas.user import UserRegisterRequest
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -17,7 +17,11 @@ router = APIRouter(prefix="/auth", tags=["auth"])
     response_model=LoginResponse,
     summary="Create user account",
 )
-def register_user(body: UserRegisterRequest, db: Session = Depends(get_db)) -> LoginResponse:
+def register_user(
+    body: UserRegisterRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> LoginResponse:
     email = str(body.email).strip().lower()
     name = body.name.strip()
 
@@ -57,4 +61,13 @@ def register_user(body: UserRegisterRequest, db: Session = Depends(get_db)) -> L
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
         ) from exc
+    secure_cookie = False
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=secure_cookie,
+        path="/",
+    )
     return LoginResponse(access_token=token, email=email)

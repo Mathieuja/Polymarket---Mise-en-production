@@ -4,7 +4,7 @@ import os
 from typing import Annotated
 
 from app_shared.database import User, get_db
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Cookie, Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -25,9 +25,13 @@ def _get_jwt_secret() -> str:
 def _extract_token(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     token: str | None = Query(default=None),
+    access_token: str | None = Cookie(default=None),
 ) -> str:
     if token:
         return token.strip()
+
+    if access_token:
+        return access_token.strip()
 
     if credentials and credentials.scheme.lower() == "bearer":
         return credentials.credentials.strip()

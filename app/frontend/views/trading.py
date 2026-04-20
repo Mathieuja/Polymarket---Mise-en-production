@@ -356,6 +356,7 @@ def _refresh_orderbook(api: APIClient, market: dict, token: str | None) -> dict:
 
     raw_orderbook = api.get_orderbook(token=token)
     st.session_state.orderbook = raw_orderbook
+    st.session_state.orderbook_market_slug = str(market.get("slug") or "")
     return raw_orderbook
 
 
@@ -475,6 +476,14 @@ def _render_market_list(api: APIClient, portfolios: list[dict], token: str | Non
                 key=f"open_market_{market['slug']}",
                 use_container_width=True,
             ):
+                if st.session_state.get("market_stream_started"):
+                    try:
+                        api.stop_stream(token=token)
+                    except APIClientError:
+                        pass
+                st.session_state.orderbook = None
+                st.session_state.orderbook_market_slug = None
+                st.session_state.market_stream_started = False
                 st.session_state.active_market_slug = market["slug"]
                 st.session_state.trading_view = "detail"
                 st.rerun()
@@ -511,19 +520,41 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
         st.session_state.trading_view = "list"
         st.rerun()
 
+    cached_slug = str(st.session_state.get("orderbook_market_slug") or "")
+    if cached_slug and cached_slug != str(slug):
+        st.session_state.orderbook = None
+        st.session_state.orderbook_market_slug = None
+
     market = _load_market_detail(api, slug, token)
     if not market:
         render_empty_state("Market not found.", "Return to list view and select another market.")
         if st.button("Back to markets"):
+            if st.session_state.get("market_stream_started"):
+                try:
+                    api.stop_stream(token=token)
+                except APIClientError:
+                    pass
             st.session_state.trading_view = "list"
             st.session_state.active_market_slug = None
+            st.session_state.orderbook = None
+            st.session_state.orderbook_market_slug = None
+            st.session_state.market_stream_started = False
             st.rerun()
         return
 
     top_left, top_right = st.columns([1.4, 1.0], gap="large")
     with top_left:
         if st.button("Back to markets"):
+            if st.session_state.get("market_stream_started"):
+                try:
+                    api.stop_stream(token=token)
+                except APIClientError:
+                    pass
             st.session_state.trading_view = "list"
+            st.session_state.active_market_slug = None
+            st.session_state.orderbook = None
+            st.session_state.orderbook_market_slug = None
+            st.session_state.market_stream_started = False
             st.rerun()
         st.markdown(f"## {market['title']}")
         render_label_value_pairs(
@@ -612,6 +643,8 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
             st.rerun()
 
     raw_orderbook = st.session_state.get("orderbook")
+    if st.session_state.get("orderbook_market_slug") not in {None, str(slug)}:
+        raw_orderbook = None
     if raw_orderbook is None and st.session_state[show_key]:
         try:
             raw_orderbook = _refresh_orderbook(api, market, token)
