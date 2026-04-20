@@ -46,6 +46,10 @@ def run_migrations(engine: Engine) -> None:
         return
 
     with engine.begin() as connection:
+        # Serialize migration runs across backend/worker containers.
+        # pg_advisory_xact_lock is transaction-scoped and auto-released at commit/rollback.
+        connection.execute(text("SELECT pg_advisory_xact_lock(842019113)"))
+
         connection.execute(
             text(
                 f'CREATE TABLE IF NOT EXISTS "{MIGRATION_TABLE}" ('
@@ -68,6 +72,10 @@ def run_migrations(engine: Engine) -> None:
 
             migration.upgrade(connection)
             connection.execute(
-                text(f'INSERT INTO "{MIGRATION_TABLE}" (version) VALUES (:version)'),
+                text(
+                    f'INSERT INTO "{MIGRATION_TABLE}" (version) VALUES (:version) '
+                    'ON CONFLICT (version) DO NOTHING'
+                ),
                 {"version": migration.version},
             )
+            applied_versions.add(migration.version)
