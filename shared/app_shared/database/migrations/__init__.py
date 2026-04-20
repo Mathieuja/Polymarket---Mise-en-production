@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 MIGRATION_TABLE = "schema_migrations"
+MIGRATION_LOCK_KEY = 847392114
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,10 @@ def run_migrations(engine: Engine) -> None:
         return
 
     with engine.begin() as connection:
+        # Ensure only one process applies migrations at a time.
+        if engine.dialect.name == "postgresql":
+            connection.execute(text("SELECT pg_advisory_xact_lock(:lock_key)"), {"lock_key": MIGRATION_LOCK_KEY})
+
         connection.execute(
             text(
                 f'CREATE TABLE IF NOT EXISTS "{MIGRATION_TABLE}" ('
@@ -67,7 +72,16 @@ def run_migrations(engine: Engine) -> None:
                 continue
 
             migration.upgrade(connection)
-            connection.execute(
-                text(f'INSERT INTO "{MIGRATION_TABLE}" (version) VALUES (:version)'),
-                {"version": migration.version},
-            )
+            if engine.dialect.name == "postgresql":
+                connection.execute(
+                    text(
+                        f'INSERT INTO "{MIGRATION_TABLE}" (version) VALUES (:version) '
+                        'ON CONFLICT (version) DO NOTHING'
+                    ),
+                    {"version": migration.version},
+                )
+            else:
+                connection.execute(
+                    text(f'INSERT INTO "{MIGRATION_TABLE}" (version) VALUES (:version)'),
+                    {"version": migration.version},
+                )
