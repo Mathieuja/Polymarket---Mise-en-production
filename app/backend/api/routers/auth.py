@@ -138,7 +138,10 @@ async def change_password(
     db: Session = Depends(get_db),
 ) -> ChangePasswordResponse:
     if body.new_password != body.new_password_confirm:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New passwords do not match")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New passwords do not match",
+        )
 
     if body.current_password == body.new_password:
         raise HTTPException(

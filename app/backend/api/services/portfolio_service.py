@@ -9,9 +9,9 @@ from app_shared.database import Market, Portfolio, Trade
 from sqlalchemy.orm import Session
 
 from app.backend.api.schemas.portfolio import (
-    MTMPositionSeries,
-    MTMPnLSnapshot,
     MarkToMarketResponse,
+    MTMPnLSnapshot,
+    MTMPositionSeries,
     PnLDataPoint,
     PortfolioCreate,
     PortfolioMetrics,
@@ -183,7 +183,11 @@ class PortfolioService:
 
         position_value = 0.0
         for position in positions:
-            mark_price = position.current_price if position.current_price is not None else position.average_price
+            mark_price = (
+                position.current_price
+                if position.current_price is not None
+                else position.average_price
+            )
             position_value += position.quantity * mark_price
 
         total_value = cash_balance + position_value
@@ -290,7 +294,11 @@ class PortfolioService:
 
         positions = []
         for pos in details.positions:
-            current_price = pos.current_price if pos.current_price is not None else pos.average_price
+            current_price = (
+                pos.current_price
+                if pos.current_price is not None
+                else pos.average_price
+            )
             unrealized = pos.unrealized_pnl if pos.unrealized_pnl is not None else 0.0
             positions.append(
                 MTMPositionSeries(
@@ -453,7 +461,11 @@ class PortfolioService:
             market_question=market.question if market else None,
         )
 
-    def _portfolio_to_response(self, portfolio: Portfolio, cash_balance: float) -> PortfolioResponse:
+    def _portfolio_to_response(
+        self,
+        portfolio: Portfolio,
+        cash_balance: float,
+    ) -> PortfolioResponse:
         return PortfolioResponse(
             id=str(portfolio.id),
             user_id=str(portfolio.user_id),

@@ -13,6 +13,7 @@ from app_shared.database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.backend.api.dependencies.auth import verify_token
 from app.backend.api.schemas.market_responses import (
     MarketDetailResponse,
     MarketFilterParams,
@@ -22,7 +23,6 @@ from app.backend.api.schemas.market_responses import (
     PriceHistoryResponse,
     SyncStatsResponse,
 )
-from app.backend.api.dependencies.auth import verify_token
 from app.backend.api.services.market_service import MarketService
 from app.backend.api.services.polymarket_api import get_polymarket_api
 
