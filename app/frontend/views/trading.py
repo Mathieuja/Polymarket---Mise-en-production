@@ -442,11 +442,12 @@ def _render_market_list(api: APIClient, portfolios: list[dict], token: str | Non
             search=search or None,
             active=True,
             sort_by="volume_24h_desc" if "Volume" in sort_label else "created_at_desc",
+            token=token,
         )
         markets = [_normalize_market(m) for m in listing.get("items", [])]
         total_pages = int(listing.get("total_pages", 1) or 1)
     except APIClientError:
-        markets = [_normalize_market(m) for m in api.get_markets()]
+        markets = [_normalize_market(m) for m in api.get_markets(token=token)]
         if search:
             search_l = search.lower()
             markets = [m for m in markets if search_l in str(m.get("title", "")).lower()]
@@ -493,11 +494,11 @@ def _render_market_list(api: APIClient, portfolios: list[dict], token: str | Non
 
 def _load_market_detail(api: APIClient, slug: str) -> dict | None:
     try:
-        market = api.get_market(slug)
+        market = api.get_market(slug, token=token)
         return _normalize_market(market)
     except APIClientError:
         pass
-    for market in api.get_markets():
+    for market in api.get_markets(token=token):
         normalized = _normalize_market(market)
         if str(normalized.get("slug")) == str(slug):
             return normalized

@@ -36,7 +36,7 @@ def render(api: APIClient) -> None:
     token = st.session_state.get("token")
 
     try:
-        markets = api.get_markets()
+        markets = api.get_markets(token=token)
         portfolios = api.list_portfolios(token=token)
     except APIClientError as exc:
         render_api_error_state(exc, resource="metrics inputs")

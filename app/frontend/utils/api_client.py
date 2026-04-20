@@ -187,6 +187,7 @@ class APIClient:
         closed: bool | None = None,
         volume_min: float | None = None,
         sort_by: str | None = None,
+        token: str | None = None,
     ) -> dict[str, Any]:
         if self.backend_mode == "mock":
             items = list(_load_fixture("markets.json"))
@@ -242,7 +243,7 @@ class APIClient:
         if sort_by:
             params["sort_by"] = sort_by
 
-        data = self._get_json("/markets", params=params)
+        data = self._get_json("/markets", token=token, params=params)
         if isinstance(data, dict) and "markets" in data:
             return {
                 "items": data.get("markets", []),
@@ -259,11 +260,11 @@ class APIClient:
             }
         raise APIClientError("Unexpected /markets response")
 
-    def get_markets(self) -> list[dict[str, Any]]:
+    def get_markets(self, token: str | None = None) -> list[dict[str, Any]]:
         if self.backend_mode == "mock":
             return list(_load_fixture("markets.json"))
 
-        listing = self.list_markets(page=1, page_size=100)
+        listing = self.list_markets(page=1, page_size=100, token=token)
         return list(listing.get("items", []))
 
     def get_top_markets(
@@ -271,6 +272,7 @@ class APIClient:
         *,
         limit: int = 10,
         sort_by: str = "volume_24h",
+        token: str | None = None,
     ) -> list[dict[str, Any]]:
         if self.backend_mode == "mock":
             markets = list(_load_fixture("markets.json"))
@@ -282,12 +284,16 @@ class APIClient:
                 )
             return markets[:limit]
 
-        data = self._get_json("/markets/top", params={"limit": limit, "sort_by": sort_by})
+        data = self._get_json(
+            "/markets/top",
+            token=token,
+            params={"limit": limit, "sort_by": sort_by},
+        )
         if isinstance(data, list):
             return data
         raise APIClientError("Unexpected /markets/top response")
 
-    def get_market(self, slug: str) -> dict[str, Any]:
+    def get_market(self, slug: str, token: str | None = None) -> dict[str, Any]:
         if self.backend_mode == "mock":
             for market in _load_fixture("markets.json"):
                 candidate_slug = (
@@ -298,17 +304,23 @@ class APIClient:
                 if str(candidate_slug) == str(slug):
                     return market
             raise APIClientError("Market not found")
-        return self._get_json(f"/markets/by-slug/{slug}")
+        return self._get_json(f"/markets/by-slug/{slug}", token=token)
 
-    def get_market_by_condition(self, condition_id: str) -> dict[str, Any]:
+    def get_market_by_condition(self, condition_id: str, token: str | None = None) -> dict[str, Any]:
         if self.backend_mode == "mock":
             for market in _load_fixture("markets.json"):
                 if str(market.get("condition_id")) == str(condition_id):
                     return market
             raise APIClientError("Market not found")
-        return self._get_json(f"/markets/by-condition/{condition_id}")
+        return self._get_json(f"/markets/by-condition/{condition_id}", token=token)
 
-    def get_price_history(self, slug: str, *, outcome_index: int = 0) -> dict[str, Any]:
+    def get_price_history(
+        self,
+        slug: str,
+        *,
+        outcome_index: int = 0,
+        token: str | None = None,
+    ) -> dict[str, Any]:
         if self.backend_mode == "mock":
             market = self.get_market(slug)
             prices = market.get("prices")
@@ -318,17 +330,18 @@ class APIClient:
 
         return self._get_json(
             f"/markets/by-slug/{slug}/prices",
+            token=token,
             params={"outcome_index": outcome_index},
         )
 
-    def get_sync_stats(self) -> dict[str, Any]:
+    def get_sync_stats(self, token: str | None = None) -> dict[str, Any]:
         if self.backend_mode == "mock":
             markets = list(_load_fixture("markets.json"))
             return {
                 "markets_count": len(markets),
                 "status": "mock",
             }
-        return self._get_json("/markets/stats")
+        return self._get_json("/markets/stats", token=token)
 
     # -------------------------
     # Portfolio / trades
