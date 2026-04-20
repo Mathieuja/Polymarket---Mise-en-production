@@ -16,6 +16,189 @@ from utils.ui import (
 )
 
 
+def _to_float(value: object, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def _normalize_levels(levels: object, *, reverse: bool) -> list[tuple[float, float]]:
+    parsed: list[tuple[float, float]] = []
+    if isinstance(levels, dict):
+        for price, qty in levels.items():
+            p = _to_float(price, -1.0)
+            q = _to_float(qty, 0.0)
+            if p >= 0 and q > 0:
+                parsed.append((p, q))
+    elif isinstance(levels, list):
+        for row in levels:
+            if isinstance(row, (list, tuple)) and len(row) >= 2:
+                p = _to_float(row[0], -1.0)
+                q = _to_float(row[1], 0.0)
+            elif isinstance(row, dict):
+                p = _to_float(row.get("price", row.get("p")), -1.0)
+                q = _to_float(row.get("size", row.get("qty", row.get("quantity"))), 0.0)
+            else:
+                continue
+            if p >= 0 and q > 0:
+                parsed.append((p, q))
+
+    parsed.sort(key=lambda item: item[0], reverse=reverse)
+    return parsed
+
+
+def _extract_orderbook_payload(raw_orderbook: object) -> dict:
+    if not isinstance(raw_orderbook, dict):
+        return {}
+
+    messages = raw_orderbook.get("messages")
+    if isinstance(messages, dict):
+        return messages
+
+    data = raw_orderbook.get("data")
+    if isinstance(data, dict) and isinstance(data.get("messages"), dict):
+        return data["messages"]
+
+    return raw_orderbook
+
+
+def _book_with_levels(entry: object) -> dict[str, list[tuple[float, float]]] | None:
+    if not isinstance(entry, dict):
+        return None
+    if "bids" not in entry and "asks" not in entry:
+        return None
+    return {
+        "bids": _normalize_levels(entry.get("bids", {}), reverse=True),
+        "asks": _normalize_levels(entry.get("asks", {}), reverse=False),
+    }
+
+
+def _map_orderbook_by_outcome(raw_orderbook: object, market: dict) -> dict[str, dict]:
+    payload = _extract_orderbook_payload(raw_orderbook)
+    outcomes = [
+        str(outcome).upper()
+        for outcome in market.get("outcomes", ["YES", "NO"])
+        if str(outcome).strip()
+    ]
+    if not outcomes:
+        outcomes = ["YES", "NO"]
+
+    token_ids = [str(token_id) for token_id in market.get("clob_token_ids", []) if token_id]
+
+    mapped: dict[str, dict] = {}
+
+    # Case 1: direct payload is a single orderbook with bids/asks.
+    direct = _book_with_levels(payload)
+    if direct is not None:
+        for outcome in outcomes:
+            mapped[outcome] = direct
+        return mapped
+
+    # Case 2: payload is token keyed.
+    first_detected: dict | None = None
+    for idx, outcome in enumerate(outcomes):
+        candidates: list[str] = [outcome, outcome.lower()]
+        if idx < len(token_ids):
+            candidates.insert(0, token_ids[idx])
+
+        selected: dict | None = None
+        for candidate in candidates:
+            candidate_entry = _book_with_levels(payload.get(candidate))
+            if candidate_entry is not None:
+                selected = candidate_entry
+                break
+
+        if selected is None:
+            # Fallback: first orderbook-looking entry.
+            for value in payload.values():
+                maybe_entry = _book_with_levels(value)
+                if maybe_entry is not None:
+                    selected = maybe_entry
+                    break
+
+        if selected is not None:
+            mapped[outcome] = selected
+            if first_detected is None:
+                first_detected = selected
+
+    if first_detected is not None:
+        for outcome in outcomes:
+            mapped.setdefault(outcome, first_detected)
+
+    return mapped
+
+
+def _estimate_executions(
+    levels: list[tuple[float, float]],
+    quantity: float,
+) -> tuple[list[tuple[float, float]], float, float, float | None]:
+    remaining = float(quantity)
+    executions: list[tuple[float, float]] = []
+
+    for price, available in levels:
+        if remaining <= 0:
+            break
+        take = min(remaining, available)
+        if take <= 0:
+            continue
+        executions.append((take, price))
+        remaining -= take
+
+    total = sum(qty * price for qty, price in executions)
+    executed_qty = sum(qty for qty, _ in executions)
+    vwap = (total / executed_qty) if executed_qty > 0 else None
+    return executions, remaining, total, vwap
+
+
+def _render_orderbook_block(orderbook_by_outcome: dict[str, dict]) -> None:
+    outcomes = list(orderbook_by_outcome.keys())
+    if not outcomes:
+        render_info_card(
+            "Order book unavailable",
+            "No orderbook levels available for this market yet.",
+            tone="warning",
+        )
+        return
+
+    columns = st.columns(len(outcomes))
+    for column, outcome in zip(columns, outcomes):
+        with column:
+            book = orderbook_by_outcome.get(outcome, {})
+            asks = book.get("asks", [])[:8]
+            bids = book.get("bids", [])[:8]
+
+            st.markdown(f"#### {outcome}")
+            ask_df = pd.DataFrame(asks, columns=["Price", "Qty"])
+            bid_df = pd.DataFrame(bids, columns=["Price", "Qty"])
+
+            if ask_df.empty and bid_df.empty:
+                st.caption("No levels")
+                continue
+
+            if not ask_df.empty:
+                st.caption("Asks")
+                st.dataframe(ask_df, use_container_width=True, hide_index=True)
+            if not bid_df.empty:
+                st.caption("Bids")
+                st.dataframe(bid_df, use_container_width=True, hide_index=True)
+
+
+def _refresh_orderbook(api: APIClient, market: dict, token: str | None) -> dict:
+    asset_ids = [str(asset_id) for asset_id in market.get("clob_token_ids", []) if asset_id]
+    if asset_ids:
+        try:
+            api.start_stream(asset_ids, token=token)
+            st.session_state.market_stream_started = True
+            st.session_state.active_market_slug = str(market.get("slug"))
+        except APIClientError:
+            pass
+
+    raw_orderbook = api.get_orderbook(token=token)
+    st.session_state.orderbook = raw_orderbook
+    return raw_orderbook
+
+
 def _normalize_market(market: dict) -> dict:
     slug = market.get("slug") or market.get("id") or market.get("condition_id")
     title = market.get("question") or market.get("title") or str(slug)
@@ -238,9 +421,50 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
             config={"displayModeBar": False},
         )
 
+    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
+    render_section_header(
+        "Order book",
+        "Use orderbook levels as execution prices, with refresh and visibility controls.",
+    )
+
+    show_key = f"show_orderbook_{slug}"
+    if show_key not in st.session_state:
+        st.session_state[show_key] = False
+
+    col_show, col_refresh = st.columns([1.0, 1.0])
+    with col_show:
+        show_label = "Hide orderbook" if st.session_state[show_key] else "Show orderbook"
+        if st.button(show_label, key=f"toggle_orderbook_{slug}", use_container_width=True):
+            st.session_state[show_key] = not st.session_state[show_key]
+            st.rerun()
+    with col_refresh:
+        if st.button(
+            "Refresh orderbook",
+            key=f"refresh_orderbook_{slug}",
+            use_container_width=True,
+        ):
+            try:
+                _refresh_orderbook(api, market, token)
+            except APIClientError as exc:
+                render_api_error_state(exc, resource="order book")
+                return
+            st.rerun()
+
+    raw_orderbook = st.session_state.get("orderbook")
+    if raw_orderbook is None and st.session_state[show_key]:
+        try:
+            raw_orderbook = _refresh_orderbook(api, market, token)
+        except APIClientError:
+            raw_orderbook = None
+
+    orderbook_by_outcome = _map_orderbook_by_outcome(raw_orderbook, market)
+
+    if st.session_state[show_key]:
+        _render_orderbook_block(orderbook_by_outcome)
+
     render_section_header(
         "Trade ticket",
-        "Choose target portfolio, side, and execution settings before submitting the paper order.",
+        "Execution price is driven by orderbook levels, as in the legacy trading flow.",
     )
     portfolio_ids = [str(p.get("id") or p.get("_id")) for p in portfolios]
     selected_portfolio_id = str(st.session_state.get("selected_portfolio_id") or portfolio_ids[0])
@@ -270,54 +494,53 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
     outcome = col_side.selectbox("Outcome", options=outcomes, index=0)
     action = col_action.selectbox("Action", options=["BUY", "SELL"], index=0)
 
-    default_price = float(market["yes_price"])
-    if outcome == "NO":
-        default_price = float(market["no_price"])
-    qty = st.number_input("Quantity", min_value=1.0, value=1.0, step=1.0)
-    price = st.slider("Price", min_value=0.0, max_value=1.0, value=default_price, step=0.01)
-    note = st.text_input("Note (optional)", value="")
-    st.caption(
-        f"Preview: {action} {format_quantity(qty)} {outcome} at {format_probability(price)}"
-    )
+    book = orderbook_by_outcome.get(outcome, {})
+    level_side = "asks" if action == "BUY" else "bids"
+    levels = list(book.get(level_side, []))
+    best_price = levels[0][0] if levels else None
 
-    if st.button("Submit trade", type="primary"):
-        market_id = str(market.get("id") or market.get("slug"))
-        try:
-            api.create_trade(
-                portfolio_id=selected_portfolio_id,
-                market_id=market_id,
-                outcome=outcome,
-                action=action,
-                qty=float(qty),
-                price=float(price),
-                token=token,
-                notes=note or None,
+    qty = st.number_input("Quantity", min_value=1.0, value=1.0, step=1.0)
+    note = st.text_input("Note (optional)", value="")
+    if best_price is None:
+        st.warning("No executable levels in the orderbook for this token/side.")
+        st.caption("Use Show/Refresh orderbook to fetch live levels.")
+    else:
+        executions, remaining, total_cost, vwap = _estimate_executions(levels, float(qty))
+        vwap_text = format_probability(vwap) if vwap is not None else "-"
+        st.caption(
+            f"Best {level_side[:-1]}: {format_probability(best_price)} | "
+            f"VWAP: {vwap_text} | Notional: ${total_cost:,.2f}"
+        )
+        if remaining > 0:
+            st.warning(
+                f"Partial fill expected: {format_quantity(float(qty) - remaining)} / "
+                f"{format_quantity(qty)} available in the book."
             )
+
+    if st.button("Submit trade", type="primary", disabled=best_price is None):
+        market_id = str(market.get("id") or market.get("slug"))
+        executions, _, _, _ = _estimate_executions(levels, float(qty))
+        if not executions:
+            st.error("Orderbook has no available levels for execution.")
+            return
+
+        try:
+            for exec_qty, exec_price in executions:
+                api.create_trade(
+                    portfolio_id=selected_portfolio_id,
+                    market_id=market_id,
+                    outcome=outcome,
+                    action=action,
+                    qty=float(exec_qty),
+                    price=float(exec_price),
+                    token=token,
+                    notes=note or None,
+                )
         except APIClientError as exc:
             render_api_error_state(exc, resource="trade creation")
             return
         st.success("Trade submitted")
         st.rerun()
-
-    st.markdown('<div class="section-spacer"></div>', unsafe_allow_html=True)
-    render_section_header(
-        "Order book",
-        "Live order book snapshot when stream endpoint is available.",
-    )
-    try:
-        orderbook = api.get_orderbook(token=token)
-        st.session_state.orderbook = orderbook
-    except APIClientError:
-        orderbook = st.session_state.get("orderbook")
-
-    if isinstance(orderbook, dict) and orderbook:
-        st.json(orderbook)
-    else:
-        render_info_card(
-            "Order book unavailable",
-            "Start market stream from backend to display real-time order book updates.",
-            tone="warning",
-        )
 
 
 def render(api: APIClient) -> None:
