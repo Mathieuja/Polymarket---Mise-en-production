@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app_shared.database.base import Base
@@ -26,6 +26,47 @@ class User(Base):
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, name={self.name}, email={self.email})>"
+
+
+class Portfolio(Base):
+    """Persisted paper-trading portfolio owned by a user."""
+
+    __tablename__ = "portfolios"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    initial_balance: Mapped[float] = mapped_column(Float, nullable=False, default=10000.0)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+
+
+class Trade(Base):
+    """Persisted trade execution belonging to a portfolio."""
+
+    __tablename__ = "trades"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    portfolio_id: Mapped[int] = mapped_column(
+        ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    market_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    outcome: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    side: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    quantity: Mapped[float] = mapped_column(Float, nullable=False)
+    price: Mapped[float] = mapped_column(Float, nullable=False)
+    trade_timestamp: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
 
 class Market(Base):

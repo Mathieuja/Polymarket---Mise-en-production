@@ -18,17 +18,27 @@ sys.path.insert(0, str(shared_path))
 
 
 @pytest.fixture(autouse=True)
-def mock_database_initialization(monkeypatch: pytest.MonkeyPatch) -> None:
+def mock_database_initialization(
+    monkeypatch: pytest.MonkeyPatch,
+    request: pytest.FixtureRequest,
+) -> None:
     """
     Mock database initialization to prevent connection attempts during tests.
 
     This fixture automatically applies to all tests, mocking the init_db()
     function so that tests don't try to connect to a real database.
     """
+    # Only backend component tests need app initialization monkeypatching.
+    if "tests/unit/components/backend" not in str(request.fspath):
+        return
+
     # Mock the init_db function where it's used (in app.backend.api.main)
-    # rather than where it's defined, since it's already imported
+    # rather than where it's defined, since it's already imported.
     mock_init_db = MagicMock()
-    monkeypatch.setattr("app.backend.api.main.init_db", mock_init_db)
+    try:
+        monkeypatch.setattr("app.backend.api.main.init_db", mock_init_db)
+    except ImportError:
+        pytest.skip("Backend optional dependencies are not installed in this environment")
 
 
 

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import streamlit as st
-from utils.api_client import APIClient
+from utils.api_client import APIClient, APIClientError
 from utils.session import logout
 from utils.ui import (
     badge_html,
+    render_api_error_state,
     render_info_card,
     render_label_value_pairs,
     render_page_header,
@@ -15,6 +16,19 @@ from utils.ui import (
 def render(api: APIClient) -> None:
     is_authenticated = bool(st.session_state.get("is_authenticated"))
     selected_portfolio_id = str(st.session_state.get("selected_portfolio_id") or "-")
+    token = st.session_state.get("token")
+
+    user_data: dict | None = None
+    if is_authenticated:
+        try:
+            user_data = api.get_me(token=token)
+            st.session_state.user = user_data
+            st.session_state.user_email = user_data.get("email", st.session_state.get("user_email"))
+        except APIClientError:
+            user_data = st.session_state.get("user")
+
+    email = (user_data or {}).get("email") or st.session_state.get("user_email") or "Guest session"
+
     render_page_header(
         "Account and session",
         (
@@ -42,63 +56,89 @@ def render(api: APIClient) -> None:
         f"""
         <section class="hero-panel">
           <div class="hero-panel__eyebrow">Identity</div>
-          <h2>{st.session_state.get('user_email') or 'Guest session'}</h2>
+          <h2>{email}</h2>
           <p>{auth_label}</p>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
-    left, right = st.columns(2, gap="large")
-    with left:
-        st.markdown(
-            f"""
-            <section class="spotlight-card">
-              <div class="spotlight-card__label">Session status</div>
-              <div class="spotlight-card__value">
-                {'Ready to trade' if is_authenticated else 'Preview only'}
-              </div>
-              <div class="spotlight-card__body">
-                This state controls whether the app behaves like a signed-in paper trading
-                workspace or a simple pre-login showcase.
-              </div>
-            </section>
-            """,
-            unsafe_allow_html=True,
-        )
-    with right:
-        st.markdown(
-            f"""
-            <section class="spotlight-card">
-              <div class="spotlight-card__label">Selected portfolio</div>
-              <div class="spotlight-card__value">{selected_portfolio_id}</div>
-              <div class="spotlight-card__body">
-                Portfolio context is shared across trading, metrics, and history
-                to keep the demo flow coherent.
-              </div>
-            </section>
-            """,
-            unsafe_allow_html=True,
+    tab_profile, tab_security = st.tabs(["Profile", "Security"])
+
+    with tab_profile:
+        render_section_header(
+            "Profile information",
+            "Identity and workspace context used by trading, metrics, and history views.",
         )
 
-    render_label_value_pairs(
-        [
-            ("Email", str(st.session_state.get("user_email") or "-")),
-            ("Authenticated", "Yes" if is_authenticated else "No"),
-            ("Selected portfolio", selected_portfolio_id),
-        ]
-    )
+        if is_authenticated and user_data is None:
+            render_api_error_state(
+                APIClientError("Unable to load user profile"),
+                resource="current user profile",
+            )
 
-    render_info_card(
-        "Why this page exists",
-        (
-            "In a fuller product, this area would include permissions, "
-            "credentials, and profile preferences. For the demo, it keeps "
-            "the session explicit and easy to reset."
-        ),
-        tone="brand",
-    )
+        render_label_value_pairs(
+            [
+                ("Email", str(email)),
+                ("Authenticated", "Yes" if is_authenticated else "No"),
+                ("Selected portfolio", selected_portfolio_id),
+                ("User ID", str((user_data or {}).get("id", "-"))),
+            ]
+        )
 
-    if st.button("Logout"):
-        logout()
-        st.rerun()
+        render_info_card(
+            "Profile notes",
+            (
+                "This page preserves the legacy account flow while using the new app layout. "
+                "Profile details are fetched from the backend when available."
+            ),
+            tone="brand",
+        )
+
+        if st.button("Log out", key="account_logout"):
+            logout()
+            st.rerun()
+
+    with tab_security:
+        render_section_header(
+            "Change password",
+            "Update account password through backend validation.",
+        )
+
+        with st.form("account_change_password_form"):
+            current_password = st.text_input("Current password", type="password")
+            new_password = st.text_input("New password", type="password")
+            new_password_confirm = st.text_input("Confirm new password", type="password")
+            submitted = st.form_submit_button("Change password", type="primary")
+
+        if submitted:
+            if not current_password:
+                st.error("Please enter your current password")
+                return
+            if not new_password:
+                st.error("Please enter a new password")
+                return
+            if len(new_password) < 8:
+                st.error("The new password must be at least 8 characters long")
+                return
+            if new_password != new_password_confirm:
+                st.error("The new passwords do not match")
+                return
+            if current_password == new_password:
+                st.error("The new password must be different from the old one")
+                return
+
+            try:
+                api.change_password(
+                    token=token,
+                    current_password=current_password,
+                    new_password=new_password,
+                    new_password_confirm=new_password_confirm,
+                )
+            except APIClientError as exc:
+                st.error(str(exc))
+                return
+
+            st.success("Password changed successfully. Please log in again.")
+            logout()
+            st.rerun()

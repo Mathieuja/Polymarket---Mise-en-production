@@ -201,6 +201,12 @@ def render(api: APIClient) -> None:
         st.session_state.is_authenticated = True
         st.session_state.token = data.get("access_token")
         st.session_state.user_email = data.get("email", login_email)
+        try:
+          user = api.get_me(token=st.session_state.token)
+          st.session_state.user = user
+          st.session_state.user_email = user.get("email", st.session_state.user_email)
+        except APIClientError:
+          st.session_state.user = None
         st.session_state.nav_page = "Trading"
         st.rerun()
 

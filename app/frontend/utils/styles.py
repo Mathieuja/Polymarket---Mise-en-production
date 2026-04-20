@@ -477,14 +477,90 @@ html, body, [class*="css"] {
     border-radius: 14px;
 }
 
-.stButton > button,
-[data-testid="baseButton-primary"] {
+/* Prevent white-on-white text in Streamlit form fields. */
+.block-container [data-testid="stTextInputRootElement"] input,
+.block-container [data-testid="stNumberInput"] input,
+.block-container [data-baseweb="input"] input,
+.block-container textarea {
+    color: var(--text) !important;
+    -webkit-text-fill-color: var(--text) !important;
+    caret-color: var(--text) !important;
+}
+
+.block-container [data-testid="stTextInputRootElement"] input::placeholder,
+.block-container [data-testid="stNumberInput"] input::placeholder,
+.block-container [data-baseweb="input"] input::placeholder,
+.block-container textarea::placeholder {
+    color: var(--muted) !important;
+    opacity: 0.72 !important;
+}
+
+.block-container [data-testid="stTextInput"] label,
+.block-container [data-testid="stTextInput"] label p,
+.block-container [data-testid="stNumberInput"] label,
+.block-container [data-testid="stNumberInput"] label p,
+.block-container [data-testid="stCaptionContainer"],
+.block-container [data-testid="stCaptionContainer"] p {
+    color: var(--muted) !important;
+}
+
+/* Ensure Streamlit-native text stays readable across all pages (Trading included). */
+.block-container [data-testid="stMarkdownContainer"],
+.block-container [data-testid="stMarkdownContainer"] p,
+.block-container [data-testid="stMarkdownContainer"] li,
+.block-container [data-testid="stMarkdownContainer"] span,
+.block-container [data-testid="stMetricLabel"],
+.block-container [data-testid="stMetricValue"],
+.block-container [data-testid="stMetricDelta"],
+.block-container [data-testid="stSelectbox"] label,
+.block-container [data-testid="stSelectbox"] label p,
+.block-container [data-testid="stSlider"] label,
+.block-container [data-testid="stSlider"] label p,
+.block-container [data-testid="stCheckbox"] label,
+.block-container [data-testid="stRadio"] label,
+.block-container [data-testid="stDownloadButton"] button {
+    color: var(--text) !important;
+}
+
+.block-container [data-baseweb="select"] * {
+    color: var(--text) !important;
+}
+
+.block-container [data-baseweb="select"] svg {
+    fill: var(--muted) !important;
+}
+
+.stButton > button {
     border-radius: 999px;
-    border: 1px solid rgba(31, 96, 116, 0.15);
-    background: linear-gradient(180deg, #2b7388 0%, #1f6074 100%);
-    color: white;
+    border: 1px solid #194b5e;
+    background: linear-gradient(180deg, #2f7f98 0%, #1f6074 100%);
+    color: #ffffff !important;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
     font-weight: 700;
     padding: 0.55rem 1rem;
+    box-shadow: 0 3px 12px rgba(18, 53, 74, 0.22);
+}
+
+.stButton > button:hover {
+    border-color: #12354a;
+    background: linear-gradient(180deg, #388ca7 0%, #245f76 100%);
+    color: #ffffff !important;
+}
+
+.stButton > button:focus,
+.stButton > button:focus-visible {
+    outline: 3px solid rgba(31, 96, 116, 0.28);
+    outline-offset: 1px;
+    color: #ffffff !important;
+}
+
+[data-testid="stTabs"] button[role="tab"] {
+    color: var(--text);
+    opacity: 1;
+}
+
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+    color: var(--brand);
 }
 
 .stDownloadButton > button {

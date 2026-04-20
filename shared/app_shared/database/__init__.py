@@ -12,7 +12,14 @@ Exports:
 
 from app_shared.database.base import Base
 from app_shared.database.database import SessionLocal, engine, get_db, init_db
-from app_shared.database.models import IngestionBatch, Market, MarketSyncState, User
+from app_shared.database.models import (
+    IngestionBatch,
+    Market,
+    MarketSyncState,
+    Portfolio,
+    Trade,
+    User,
+)
 
 __all__ = [
     "Base",
@@ -21,6 +28,8 @@ __all__ = [
     "get_db",
     "init_db",
     "User",
+    "Portfolio",
+    "Trade",
     "Market",
     "MarketSyncState",
     "IngestionBatch",

@@ -176,7 +176,7 @@ services:
       API_URL: http://backend:8000
       # Streamlit configuration
       STREAMLIT_ENV: ${STREAMLIT_ENV:-development}
-      BACKEND_MODE: ${BACKEND_MODE:-mock}
+      BACKEND_MODE: ${BACKEND_MODE:-api}
     ports:
       # Map Streamlit port to host
       - "8501:8501"

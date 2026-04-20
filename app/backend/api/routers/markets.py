@@ -13,6 +13,7 @@ from app_shared.database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.backend.api.dependencies.auth import get_current_active_user
 from app.backend.api.schemas.market_responses import (
     MarketDetailResponse,
     MarketFilterParams,
@@ -24,7 +25,11 @@ from app.backend.api.schemas.market_responses import (
 )
 from app.backend.api.services.market_service import MarketService
 
-router = APIRouter(prefix="/markets", tags=["markets"])
+router = APIRouter(
+    prefix="/markets",
+    tags=["markets"],
+    dependencies=[Depends(get_current_active_user)],
+)
 
 
 def get_market_service(db: Session = Depends(get_db)) -> MarketService:

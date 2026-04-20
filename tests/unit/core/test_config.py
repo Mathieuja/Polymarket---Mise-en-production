@@ -13,7 +13,7 @@ def test_get_settings_defaults(monkeypatch):
     monkeypatch.delenv("API_URL", raising=False)
 
     settings = get_settings()
-    assert settings.backend_mode == "mock"
+    assert settings.backend_mode == "api"
     assert settings.api_url.startswith("http")
     assert settings.app_name
 

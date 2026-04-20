@@ -112,6 +112,16 @@ def main() -> None:
 
     api = APIClient(backend_mode=settings.backend_mode, api_url=settings.api_url)
 
+    nav_override = st.session_state.get("nav_override")
+    if nav_override:
+        st.session_state.nav_page = nav_override
+        st.session_state.nav_override = None
+        st.session_state.nav_key = int(st.session_state.get("nav_key", 0)) + 1
+        st.rerun()
+
+    if not st.session_state.get("is_authenticated"):
+        st.session_state.nav_page = "Login"
+
     page_name = _render_sidebar()
     module = PAGES[page_name]
     module.render(api)

@@ -36,8 +36,8 @@ def render(api: APIClient) -> None:
     token = st.session_state.get("token")
 
     try:
-        markets = api.get_markets()
-        portfolios = api.get_portfolios(token=token)
+        markets = api.get_markets(token=token)
+        portfolios = api.list_portfolios(token=token)
     except APIClientError as exc:
         render_api_error_state(exc, resource="metrics inputs")
         return
@@ -52,22 +52,73 @@ def render(api: APIClient) -> None:
         )
         return
 
-    selected_portfolio_id = st.session_state.get("selected_portfolio_id")
-    by_id = {p.get("id"): p for p in portfolios}
+    selected_portfolio_id = (
+        st.session_state.get("metrics_portfolio_id")
+        or st.session_state.get("selected_portfolio_id")
+    )
+    by_id = {str(p.get("id") or p.get("_id")): p for p in portfolios}
     if selected_portfolio_id not in by_id:
-        selected_portfolio_id = portfolios[0].get("id")
+        selected_portfolio_id = str(portfolios[0].get("id") or portfolios[0].get("_id"))
         st.session_state.selected_portfolio_id = selected_portfolio_id
+    st.session_state.metrics_portfolio_id = selected_portfolio_id
 
     portfolio = by_id[selected_portfolio_id]
+
+    # Try backend MTM endpoint first to preserve old frontend behavior.
+    mtm_data: dict | None = None
     try:
-        trades = [
-            t for t in api.get_trades(token=token) if t.get("portfolio_id") == selected_portfolio_id
-        ]
+        mtm_data = api.get_portfolio_mtm(selected_portfolio_id, token=token)
+    except APIClientError:
+        mtm_data = None
+
+    try:
+        trades = api.get_trades(
+            token=token,
+            portfolio_id=selected_portfolio_id,
+            page=1,
+            page_size=500,
+        )
     except APIClientError as exc:
         render_api_error_state(exc, resource="trade history")
         return
 
-    metrics = compute_portfolio_metrics(portfolio=portfolio, trades=trades, markets=markets)
+    if "cash_usd" not in portfolio:
+        portfolio["cash_usd"] = float(
+            portfolio.get("cash_balance", portfolio.get("initial_balance", 0.0))
+        )
+    if "initial_cash_usd" not in portfolio:
+        portfolio["initial_cash_usd"] = float(
+            portfolio.get("initial_balance", portfolio.get("cash_usd", 0.0))
+        )
+
+    normalized_trades = [
+        {
+            "portfolio_id": str(t.get("portfolio_id")),
+            "market_id": str(t.get("market_id")),
+            "outcome": str(t.get("outcome", "YES")).upper(),
+            "action": str(t.get("side", t.get("action", "BUY"))).upper(),
+            "qty": float(t.get("quantity", t.get("qty", 0.0))),
+            "price": float(t.get("price", 0.0)),
+            "ts": t.get("created_at", t.get("ts")),
+        }
+        for t in trades
+    ]
+
+    metrics = compute_portfolio_metrics(
+        portfolio=portfolio,
+        trades=normalized_trades,
+        markets=markets,
+    )
+
+    pnl_override = None
+    if isinstance(mtm_data, dict):
+        pnl_override = mtm_data.get("pnl")
+        if pnl_override is None:
+            pnl_override = mtm_data.get("value_change")
+        if pnl_override is None:
+            pnl_override = mtm_data.get("total_pnl")
+
+    displayed_pnl = float(pnl_override) if pnl_override is not None else metrics.pnl_usd
     render_kpi_row(
         [
             {"label": "Cash", "value": format_currency(metrics.cash_usd)},
@@ -75,14 +126,14 @@ def render(api: APIClient) -> None:
             {"label": "Total value", "value": format_currency(metrics.total_value_usd)},
             {
                 "label": "PnL",
-                "value": format_currency(metrics.pnl_usd),
-                "delta": format_signed_currency(metrics.pnl_usd),
-                "tone": "success" if metrics.pnl_usd >= 0 else "danger",
+                "value": format_currency(displayed_pnl),
+                "delta": format_signed_currency(displayed_pnl),
+                "tone": "success" if displayed_pnl >= 0 else "danger",
             },
         ]
     )
 
-    if not trades:
+    if not normalized_trades:
         render_empty_state(
             "This portfolio has no trades yet.",
             (
@@ -92,7 +143,7 @@ def render(api: APIClient) -> None:
         )
         return
 
-    positions = compute_positions(trades)
+    positions = compute_positions(normalized_trades)
     market_by_id = {str(m.get("id")): m for m in markets}
 
     rows: list[dict[str, object]] = []

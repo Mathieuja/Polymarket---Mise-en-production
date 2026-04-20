@@ -27,7 +27,7 @@ class Settings:
 
 def get_settings() -> Settings:
     app_name = os.getenv("APP_NAME", "Polymarket Paper Trading")
-    backend_mode = os.getenv("BACKEND_MODE", "mock").strip().lower()
+    backend_mode = os.getenv("BACKEND_MODE", "api").strip().lower()
     api_url = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
 
     if backend_mode not in {"mock", "api"}:

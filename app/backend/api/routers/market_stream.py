@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.backend.api.dependencies.auth import get_current_active_user
 from app.backend.api.schemas.market_stream import (
     LatestMessageResponse,
     OrderbookResponse,
@@ -12,7 +13,11 @@ from app.backend.api.schemas.market_stream import (
 )
 from app.backend.api.services.market_stream_service import MarketStreamService
 
-router = APIRouter(prefix="/market-stream", tags=["Market Stream"])
+router = APIRouter(
+    prefix="/market-stream",
+    tags=["Market Stream"],
+    dependencies=[Depends(get_current_active_user)],
+)
 
 
 @router.post(
