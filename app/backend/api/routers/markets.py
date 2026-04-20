@@ -13,7 +13,6 @@ from app_shared.database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.backend.api.dependencies.auth import verify_token
 from app.backend.api.schemas.market_responses import (
     MarketDetailResponse,
     MarketFilterParams,
@@ -24,13 +23,8 @@ from app.backend.api.schemas.market_responses import (
     SyncStatsResponse,
 )
 from app.backend.api.services.market_service import MarketService
-from app.backend.api.services.polymarket_api import get_polymarket_api
 
-router = APIRouter(
-    prefix="/markets",
-    tags=["markets"],
-    dependencies=[Depends(verify_token)],
-)
+router = APIRouter(prefix="/markets", tags=["markets"])
 
 
 def get_market_service(db: Session = Depends(get_db)) -> MarketService:
@@ -259,37 +253,3 @@ async def get_open_interest(
         )
 
     return await market_service.get_open_interest(slugs, force_refresh=force_refresh)
-
-
-@router.post(
-    "/admin/refresh",
-    response_model=dict,
-    summary="Manually trigger market refresh",
-)
-async def admin_refresh_markets(
-    market_service: MarketService = Depends(get_market_service),
-    limit: int = Query(100, ge=1, le=1000, description="Max markets to sync"),
-    active_only: bool = Query(True, description="Only sync active markets"),
-):
-    """Fetch fresh markets from Gamma API and upsert into PostgreSQL cache."""
-
-    api = await get_polymarket_api()
-
-    filters = {}
-    if active_only:
-        filters["closed"] = False
-        filters["active"] = True
-
-    markets = await api.get_all_markets_paginated(
-        batch_size=100,
-        max_markets=limit,
-        **filters,
-    )
-
-    count = await market_service.bulk_upsert_markets(markets)
-
-    return {
-        "message": f"Refreshed {count} markets",
-        "fetched": len(markets),
-        "upserted": count,
-    }

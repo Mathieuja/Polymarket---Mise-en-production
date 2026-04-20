@@ -29,6 +29,5 @@ Thumbs.db
 # Logs
 *.log
 
-backend_old
-frontend_old
+app_old
 live_data_worker
