@@ -26,7 +26,10 @@ def _extract_token(
     if token:
         return token
 
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authentication token")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Missing authentication token",
+    )
 
 
 def get_current_user(
