@@ -477,14 +477,22 @@ html, body, [class*="css"] {
     border-radius: 14px;
 }
 
-.stButton > button,
-[data-testid="baseButton-primary"] {
+.stButton > button {
     border-radius: 999px;
     border: 1px solid rgba(31, 96, 116, 0.15);
     background: linear-gradient(180deg, #2b7388 0%, #1f6074 100%);
     color: white;
     font-weight: 700;
     padding: 0.55rem 1rem;
+}
+
+[data-testid="stTabs"] button[role="tab"] {
+    color: var(--text);
+    opacity: 1;
+}
+
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+    color: var(--brand);
 }
 
 .stDownloadButton > button {
