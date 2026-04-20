@@ -22,14 +22,14 @@ from app.backend.api.schemas.market_responses import (
     PriceHistoryResponse,
     SyncStatsResponse,
 )
-from app.backend.api.dependencies.auth import get_current_active_user
+from app.backend.api.dependencies.auth import get_current_active_user_from_query_token
 from app.backend.api.services.market_service import MarketService
 from app.backend.api.services.polymarket_api import get_polymarket_api
 
 router = APIRouter(
     prefix="/markets",
     tags=["markets"],
-    dependencies=[Depends(get_current_active_user)],
+    dependencies=[Depends(get_current_active_user_from_query_token)],
 )
 
 

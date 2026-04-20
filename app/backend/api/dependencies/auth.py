@@ -60,3 +60,49 @@ def get_current_active_user(
         )
 
     return user
+
+
+def get_current_active_user_from_query_token(
+    token: str = Query(..., description="JWT access token"),
+    db: Session = Depends(get_db),
+) -> User:
+    """Resolve authenticated user from REQUIRED query token.
+
+    This is used for endpoints where the token must appear as a required
+    query parameter in OpenAPI/Swagger.
+    """
+
+    raw_token = token.strip()
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token is required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        payload = decode_access_token(raw_token)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
+    email = str(payload.get("sub") or "").strip().lower()
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token subject",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user

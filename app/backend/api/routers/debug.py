@@ -16,12 +16,12 @@ from botocore.config import Config
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.backend.api.dependencies.auth import get_current_active_user
+from app.backend.api.dependencies.auth import get_current_active_user_from_query_token
 
 router = APIRouter(
     prefix="/debug",
     tags=["debug"],
-    dependencies=[Depends(get_current_active_user)],
+    dependencies=[Depends(get_current_active_user_from_query_token)],
 )
 
 
