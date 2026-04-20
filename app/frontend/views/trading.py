@@ -492,7 +492,7 @@ def _render_market_list(api: APIClient, portfolios: list[dict], token: str | Non
             st.rerun()
 
 
-def _load_market_detail(api: APIClient, slug: str) -> dict | None:
+def _load_market_detail(api: APIClient, slug: str, token: str | None) -> dict | None:
     try:
         market = api.get_market(slug, token=token)
         return _normalize_market(market)
@@ -511,7 +511,7 @@ def _render_market_detail(api: APIClient, portfolios: list[dict], token: str | N
         st.session_state.trading_view = "list"
         st.rerun()
 
-    market = _load_market_detail(api, slug)
+    market = _load_market_detail(api, slug, token)
     if not market:
         render_empty_state("Market not found.", "Return to list view and select another market.")
         if st.button("Back to markets"):
