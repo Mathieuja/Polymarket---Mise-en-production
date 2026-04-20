@@ -16,7 +16,13 @@ from botocore.config import Config
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-router = APIRouter(prefix="/debug", tags=["debug"])
+from app.backend.api.dependencies.auth import get_current_active_user
+
+router = APIRouter(
+    prefix="/debug",
+    tags=["debug"],
+    dependencies=[Depends(get_current_active_user)],
+)
 
 
 def _resolve_s3_endpoint() -> str | None:

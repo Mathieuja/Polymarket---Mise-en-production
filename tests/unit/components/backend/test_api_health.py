@@ -20,3 +20,26 @@ def test_health_endpoint_returns_ok() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_openapi_exposes_bearer_security_on_business_routes() -> None:
+    with TestClient(app) as client:
+        response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    schema = response.json()
+
+    security_schemes = schema["components"]["securitySchemes"]
+    assert "HTTPBearer" in security_schemes
+    assert security_schemes["HTTPBearer"]["scheme"] == "bearer"
+
+    protected_routes = [
+        ("/markets", "get"),
+        ("/debug/health", "get"),
+        ("/market-stream/start/{asset_id}", "post"),
+        ("/portfolios", "get"),
+    ]
+
+    for path, method in protected_routes:
+        operation = schema["paths"][path][method]
+        assert operation.get("security"), f"Expected security on {method.upper()} {path}"
