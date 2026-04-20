@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.backend.api.dependencies.auth import get_current_active_user
 from app.backend.api.core.security import create_access_token, get_password_hash, verify_password
+from app.backend.api.dependencies.auth import get_current_active_user
 from app.backend.api.schemas.user import UserResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])

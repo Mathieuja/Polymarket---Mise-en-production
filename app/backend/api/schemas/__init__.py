@@ -9,6 +9,13 @@ from app.backend.api.schemas.market_responses import (
     PriceHistoryResponse,
     SyncStatsResponse,
 )
+from app.backend.api.schemas.market_stream import (
+    LatestMessageResponse,
+    OrderbookResponse,
+    StreamStartResponse,
+    StreamStopResponse,
+    TokenOrderbook,
+)
 from app.backend.api.schemas.portfolio import (
     MarkToMarketResponse,
     PortfolioCreate,
@@ -17,13 +24,6 @@ from app.backend.api.schemas.portfolio import (
     PortfolioUpdate,
     PortfolioWithPositions,
     Position,
-)
-from app.backend.api.schemas.market_stream import (
-    LatestMessageResponse,
-    OrderbookResponse,
-    StreamStartResponse,
-    StreamStopResponse,
-    TokenOrderbook,
 )
 from app.backend.api.schemas.trade import TradeCreate, TradeHistory, TradeResponse
 from app.backend.api.schemas.user import UserRegisterRequest, UserResponse
