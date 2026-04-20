@@ -477,6 +477,60 @@ html, body, [class*="css"] {
     border-radius: 14px;
 }
 
+/* Prevent white-on-white text in Streamlit form fields. */
+.block-container [data-testid="stTextInputRootElement"] input,
+.block-container [data-testid="stNumberInput"] input,
+.block-container [data-baseweb="input"] input,
+.block-container textarea {
+    color: var(--text) !important;
+    -webkit-text-fill-color: var(--text) !important;
+    caret-color: var(--text) !important;
+}
+
+.block-container [data-testid="stTextInputRootElement"] input::placeholder,
+.block-container [data-testid="stNumberInput"] input::placeholder,
+.block-container [data-baseweb="input"] input::placeholder,
+.block-container textarea::placeholder {
+    color: var(--muted) !important;
+    opacity: 0.72 !important;
+}
+
+.block-container [data-testid="stTextInput"] label,
+.block-container [data-testid="stTextInput"] label p,
+.block-container [data-testid="stNumberInput"] label,
+.block-container [data-testid="stNumberInput"] label p,
+.block-container [data-testid="stCaptionContainer"],
+.block-container [data-testid="stCaptionContainer"] p {
+    color: var(--muted) !important;
+}
+
+/* Ensure Streamlit-native text stays readable across all pages (Trading included). */
+.block-container [data-testid="stMarkdownContainer"],
+.block-container [data-testid="stMarkdownContainer"] p,
+.block-container [data-testid="stMarkdownContainer"] li,
+.block-container [data-testid="stMarkdownContainer"] span,
+.block-container [data-testid="stMetricLabel"],
+.block-container [data-testid="stMetricValue"],
+.block-container [data-testid="stMetricDelta"],
+.block-container [data-testid="stSelectbox"] label,
+.block-container [data-testid="stSelectbox"] label p,
+.block-container [data-testid="stSlider"] label,
+.block-container [data-testid="stSlider"] label p,
+.block-container [data-testid="stCheckbox"] label,
+.block-container [data-testid="stRadio"] label,
+.block-container [data-testid="stButton"] button,
+.block-container [data-testid="stDownloadButton"] button {
+    color: var(--text) !important;
+}
+
+.block-container [data-baseweb="select"] * {
+    color: var(--text) !important;
+}
+
+.block-container [data-baseweb="select"] svg {
+    fill: var(--muted) !important;
+}
+
 .stButton > button {
     border-radius: 999px;
     border: 1px solid rgba(31, 96, 116, 0.15);
