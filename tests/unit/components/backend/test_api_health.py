@@ -28,16 +28,12 @@ def test_health_endpoint_returns_ok() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_openapi_exposes_bearer_security_on_business_routes() -> None:
+def test_openapi_exposes_query_token_on_business_routes() -> None:
     with TestClient(app) as client:
         response = client.get("/openapi.json")
 
     assert response.status_code == 200
     schema = response.json()
-
-    security_schemes = schema["components"]["securitySchemes"]
-    assert "HTTPBearer" in security_schemes
-    assert security_schemes["HTTPBearer"]["scheme"] == "bearer"
 
     protected_routes = [
         ("/markets", "get"),
@@ -48,4 +44,9 @@ def test_openapi_exposes_bearer_security_on_business_routes() -> None:
 
     for path, method in protected_routes:
         operation = schema["paths"][path][method]
-        assert operation.get("security"), f"Expected security on {method.upper()} {path}"
+        token_params = [
+            param
+            for param in operation.get("parameters", [])
+            if param.get("name") == "token" and param.get("in") == "query"
+        ]
+        assert token_params, f"Expected query token on {method.upper()} {path}"

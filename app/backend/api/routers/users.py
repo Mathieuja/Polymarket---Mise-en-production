@@ -17,7 +17,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
     response_model=LoginResponse,
     summary="Create user account",
 )
-def register_user(body: UserRegisterRequest, db: Session = Depends(get_db)) -> LoginResponse:
+def register_user(
+    body: UserRegisterRequest,
+    db: Session = Depends(get_db),
+) -> LoginResponse:
     email = str(body.email).strip().lower()
     name = body.name.strip()
 

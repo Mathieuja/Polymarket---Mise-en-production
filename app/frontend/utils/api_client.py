@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -25,10 +26,7 @@ class APIClient:
     timeout_s: float = 10.0
 
     def _headers(self, token: str | None = None) -> dict[str, str]:
-        headers: dict[str, str] = {"Accept": "application/json"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        return headers
+        return {"Accept": "application/json"}
 
     # -------------------------
     # HTTP helpers
@@ -46,6 +44,9 @@ class APIClient:
     ) -> Any:
         url = f"{self.api_url}{path}"
         headers = self._headers(token)
+        request_params = dict(params or {})
+        if token:
+            request_params["token"] = token
         if payload is not None:
             headers = {**headers, "Content-Type": "application/json"}
 
@@ -54,7 +55,7 @@ class APIClient:
                 method=method,
                 url=url,
                 headers=headers,
-                params=params,
+                params=request_params,
                 json=payload,
                 timeout=self.timeout_s,
             )
@@ -505,12 +506,21 @@ class APIClient:
 
     def start_stream(self, asset_ids: list[str], token: str | None = None) -> dict[str, Any]:
         if self.backend_mode == "mock":
+            asset_key = ",".join(sorted(str(asset_id) for asset_id in asset_ids))
+            digest = hashlib.sha1(asset_key.encode("utf-8")).hexdigest()
+            base_cent = int(digest[:2], 16)
+            base_price = round(0.35 + (base_cent / 255.0) * 0.3, 4)
+            bid_1 = round(max(0.01, base_price - 0.02), 4)
+            bid_2 = round(max(0.01, base_price - 0.03), 4)
+            ask_1 = round(min(0.99, base_price + 0.02), 4)
+            ask_2 = round(min(0.99, base_price + 0.03), 4)
             st.session_state.market_stream_started = True
             st.session_state.orderbook = {
                 "asset_ids": asset_ids,
-                "bids": [[0.47, 150], [0.46, 220]],
-                "asks": [[0.53, 120], [0.54, 210]],
+                "bids": [[bid_1, 150], [bid_2, 220]],
+                "asks": [[ask_1, 120], [ask_2, 210]],
             }
+            st.session_state.orderbook_market_slug = asset_key or None
             return {"status": "started", "asset_ids": asset_ids}
         asset_id_path = ",".join(asset_ids)
         return self._post_json(f"/market-stream/start/{asset_id_path}", {}, token=token)
@@ -519,6 +529,7 @@ class APIClient:
         if self.backend_mode == "mock":
             st.session_state.market_stream_started = False
             st.session_state.orderbook = {}
+            st.session_state.orderbook_market_slug = None
             return {"status": "stopped"}
         return self._post_json("/market-stream/stop", {}, token=token)
 

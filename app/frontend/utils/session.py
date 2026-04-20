@@ -23,6 +23,7 @@ def init_session_state() -> None:
         "mock_portfolios": None,
         "mock_trades": None,
         "orderbook": None,
+        "orderbook_market_slug": None,
         "market_stream_started": False,
         "active_market_slug": None,
     }
@@ -60,3 +61,5 @@ def logout() -> None:
     st.session_state.nav_override = None
     st.session_state.trading_view = "list"
     st.session_state.active_market_slug = None
+    st.session_state.orderbook = None
+    st.session_state.orderbook_market_slug = None

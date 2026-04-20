@@ -46,7 +46,10 @@ def _require_env(name: str) -> str:
     summary="Login user",
     response_model=LoginResponse,
 )
-async def login(body: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse:
+async def login(
+    body: LoginRequest,
+    db: Session = Depends(get_db),
+) -> LoginResponse:
     _require_env("JWT_SECRET")
 
     email = str(body.email).strip().lower()
